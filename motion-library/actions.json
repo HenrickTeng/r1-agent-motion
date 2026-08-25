@@ -1,0 +1,127 @@
+{
+  "schema_version": "action-library/v1",
+  "safety_profile": "classroom-upper-v1",
+  "actions": [
+    {
+      "name": "wrist_wave",
+      "version": "1.0.0",
+      "title": "右手腕挥动",
+      "kind": "upper_body",
+      "lifecycle": "hardware_full_template_passed",
+      "classroom_enabled": false,
+      "template": [{"time_s": 2.0, "offsets": {"right_wrist_roll": 0.35}, "hold_s": 1.0}],
+      "parameters": {},
+      "hardware_evidence": "2026-08-25 +0.35 rad return-and-release test accepted; not auto-published"
+    },
+    {
+      "name": "wave_left",
+      "version": "0.1.0",
+      "title": "左手挥手",
+      "kind": "upper_body",
+      "lifecycle": "draft",
+      "classroom_enabled": false,
+      "template": [{"time_s": 2.0, "offsets": {"left_shoulder_pitch": -0.16, "left_elbow": 0.25}}, {"time_s": 3.0, "offsets": {"left_shoulder_pitch": -0.16, "left_elbow": 0.25, "left_wrist_roll": 0.25}}],
+      "parameters": {"cycles": {"type": "integer", "minimum": 1, "maximum": 2}}
+    },
+    {
+      "name": "wave_right",
+      "version": "0.1.0",
+      "title": "右手挥手",
+      "kind": "upper_body",
+      "lifecycle": "draft",
+      "classroom_enabled": false,
+      "template": [{"time_s": 2.0, "offsets": {"right_shoulder_pitch": -0.16, "right_elbow": 0.25}}, {"time_s": 3.0, "offsets": {"right_shoulder_pitch": -0.16, "right_elbow": 0.25, "right_wrist_roll": 0.25}}],
+      "parameters": {"cycles": {"type": "integer", "minimum": 1, "maximum": 2}}
+    },
+    {
+      "name": "raise_hand_left",
+      "version": "0.1.0",
+      "title": "左手举手",
+      "kind": "upper_body",
+      "lifecycle": "draft",
+      "classroom_enabled": false,
+      "template": [{"time_s": 2.5, "offsets": {"left_shoulder_pitch": -0.2, "left_shoulder_roll": 0.12, "left_elbow": 0.2}, "hold_s": 1.0}],
+      "parameters": {"hold_s": {"type": "number", "minimum": 0.5, "maximum": 3.0}}
+    },
+    {
+      "name": "raise_hand_right",
+      "version": "0.1.0",
+      "title": "右手举手",
+      "kind": "upper_body",
+      "lifecycle": "draft",
+      "classroom_enabled": false,
+      "template": [{"time_s": 2.5, "offsets": {"right_shoulder_pitch": -0.2, "right_shoulder_roll": -0.12, "right_elbow": 0.2}, "hold_s": 1.0}],
+      "parameters": {"hold_s": {"type": "number", "minimum": 0.5, "maximum": 3.0}}
+    },
+    {
+      "name": "salute_left",
+      "version": "0.1.0",
+      "title": "左手敬礼",
+      "kind": "upper_body",
+      "lifecycle": "draft",
+      "classroom_enabled": false,
+      "template": [{"time_s": 2.5, "offsets": {"left_shoulder_pitch": -0.18, "left_shoulder_roll": 0.1, "left_elbow": 0.28}, "hold_s": 1.0}],
+      "parameters": {"hold_s": {"type": "number", "minimum": 0.5, "maximum": 2.0}}
+    },
+    {
+      "name": "salute_right",
+      "version": "0.1.0",
+      "title": "右手敬礼",
+      "kind": "upper_body",
+      "lifecycle": "draft",
+      "classroom_enabled": false,
+      "template": [{"time_s": 2.5, "offsets": {"right_shoulder_pitch": -0.18, "right_shoulder_roll": -0.1, "right_elbow": 0.28}, "hold_s": 1.0}],
+      "parameters": {"hold_s": {"type": "number", "minimum": 0.5, "maximum": 2.0}}
+    },
+    {
+      "name": "open_arms",
+      "version": "0.1.0",
+      "title": "张开双臂",
+      "kind": "upper_body",
+      "lifecycle": "draft",
+      "classroom_enabled": false,
+      "template": [{"time_s": 2.5, "offsets": {"left_shoulder_roll": 0.14, "right_shoulder_roll": -0.14}, "hold_s": 1.0}],
+      "parameters": {"hold_s": {"type": "number", "minimum": 0.5, "maximum": 2.0}}
+    },
+    {
+      "name": "nod",
+      "version": "0.1.0",
+      "title": "点头",
+      "kind": "upper_body",
+      "lifecycle": "draft",
+      "classroom_enabled": false,
+      "template": [{"time_s": 1.5, "offsets": {"head_pitch": 0.1}}, {"time_s": 2.5, "offsets": {"head_pitch": -0.06}}],
+      "parameters": {"cycles": {"type": "integer", "minimum": 1, "maximum": 2}}
+    },
+    {
+      "name": "look",
+      "version": "0.1.0",
+      "title": "左右看和回正",
+      "kind": "upper_body",
+      "lifecycle": "draft",
+      "classroom_enabled": false,
+      "template": [{"time_s": 1.8, "offsets": {"head_yaw": 0.15}, "hold_s": 0.5}],
+      "parameters": {"direction": {"type": "string", "enum": ["left", "right", "center"]}, "hold_s": {"type": "number", "minimum": 0.5, "maximum": 2.0}}
+    },
+    {
+      "name": "welcome",
+      "version": "0.1.0",
+      "title": "欢迎组合",
+      "kind": "composition",
+      "lifecycle": "draft",
+      "classroom_enabled": false,
+      "steps": ["open_arms", "wave_right"],
+      "parameters": {}
+    },
+    {
+      "name": "self_introduction",
+      "version": "0.1.0",
+      "title": "自我介绍组合",
+      "kind": "composition",
+      "lifecycle": "draft",
+      "classroom_enabled": false,
+      "steps": ["say:introduction", "wave_right"],
+      "parameters": {}
+    }
+  ]
+}

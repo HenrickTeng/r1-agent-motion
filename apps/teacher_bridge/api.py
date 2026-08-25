@@ -10,6 +10,7 @@ from apps.teacher_bridge.gateway_client import GatewayClient, MockGatewayClient
 from apps.teacher_bridge.service import TeacherBridgeService
 from motion_core.config import Settings
 from motion_core.errors import R1MotionError
+from motion_core.library import seed_action_library
 
 
 class StrictRequest(BaseModel):
@@ -39,10 +40,9 @@ class ClassroomSessionRequest(StrictRequest):
 
 def create_app(database_url: str | None = None, gateway: GatewayClient | None = None) -> FastAPI:
     settings = Settings.from_env()
-    service = TeacherBridgeService(
-        create_session_factory(database_url or settings.database_url),
-        gateway or MockGatewayClient(),
-    )
+    session_factory = create_session_factory(database_url or settings.database_url)
+    seed_action_library(session_factory)
+    service = TeacherBridgeService(session_factory, gateway or MockGatewayClient())
     app = FastAPI(title="R1 Teacher Bridge", version="1.0.0")
     app.state.service = service
 
