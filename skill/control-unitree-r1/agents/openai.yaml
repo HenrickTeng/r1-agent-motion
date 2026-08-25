@@ -1,0 +1,4 @@
+interface:
+  display_name: "Control Unitree R1"
+  short_description: "Safe classroom voice interaction and upper-body motion planning"
+  default_prompt: "Use $control-unitree-r1 to handle a student voice request safely on the R1 robot."
