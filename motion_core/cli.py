@@ -67,6 +67,7 @@ HARDWARE_CASES = {
     "asr": ("R1_ASR_LISTENER_BIN", "read_only"),
     "tts": ("R1_TTS_SAY_BIN", "audio"),
     "wrist-wave": ("R1_SAFE_WRIST_WAVE_BIN", "motion"),
+    "right-shoulder-pitch": ("R1_SAFE_RIGHT_SHOULDER_PITCH_BIN", "motion"),
 }
 
 
@@ -91,7 +92,7 @@ def command_hardware_test(args: argparse.Namespace) -> int:
         command = [binary, f"--network_interface={args.interface}", "--get_fsm_id", "--get_fsm_mode"]
     elif args.case == "tts":
         command = [binary, args.interface, args.text, "0"]
-    elif args.case == "wrist-wave":
+    elif args.case in {"wrist-wave", "right-shoulder-pitch"}:
         command = [binary, args.interface, args.scale]
     completed = subprocess.run(command, check=False)
     emit({**preview, "exit_code": completed.returncode, "motion_sent": risk == "motion"})

@@ -25,14 +25,14 @@
 | H3 | `rt/lowstate` 只读反馈 | 否 | 35 电机已读到，验收前复测 |
 | H4 | R1 ASR | 否 | 已识别“你好你好。”，验收前复测 |
 | H5 | R1 TTS | 否 | 返回码 0，验收前复测 |
-| H6 | 右腕回归：0.12 rad 后 0.35 rad | 是 | 等待当前项目二进制复验 |
-| H7 | 每个新增关节小幅单项 | 是 | 未开始 |
+| H6 | 右腕回归：0.12 rad 后 0.35 rad | 是 | 当前项目二进制已通过 |
+| H7 | 每个新增关节小幅单项 | 是 | 右肩 pitch 小幅与目标幅度已通过；其他关节未开始 |
 | H8 | 每个手势小幅模板 | 是 | 未开始 |
 | H9 | 每个手势目标幅度 | 是 | 未开始 |
 | H10 | 前后 `move_for` | 是 | 未开始 |
 | H11 | 横向 `move_for` | 是 | 未开始 |
 | H12 | `turn_relative` 10°、20°、30° | 是 | 未开始 |
-| H13 | 语音组合与 DeepSeek 工具调用 | 是 | 未开始 |
+| H13 | 语音组合与 DeepSeek 工具调用 | 是 | 本地安全 Agent 监督试验已通过；DeepSeek/生产 Gateway 未开始 |
 | H14 | `.r1motion` 导入、复验、缩放试验 | 是 | 模型门禁未解除 |
 
 ## 构建
@@ -49,6 +49,7 @@ export R1_ARM_FEEDBACK_TEST_BIN="$PWD/build/hardware-tests/r1_arm_feedback_test"
 export R1_ASR_LISTENER_BIN="$PWD/build/hardware-tests/r1_asr_listener"
 export R1_TTS_SAY_BIN="$PWD/build/hardware-tests/r1_tts_say"
 export R1_SAFE_WRIST_WAVE_BIN="$PWD/build/hardware-tests/r1_safe_wrist_wave"
+export R1_SAFE_RIGHT_SHOULDER_PITCH_BIN="$PWD/build/hardware-tests/r1_safe_right_shoulder_pitch_trial"
 ```
 
 项目自有的腕部测试已迁入 `hardware-tests/`，不再依赖或继续修改 SDK 示例目录。
@@ -89,6 +90,20 @@ CLI 门禁解除后，真机程序还会再次显示具体幅度并等待输入 
 ## H7–H14
 
 每个关节、模板、方向、角度和动作包都是独立测试，不共享一次确认。新动作先使用 `hardware_trial_scale=0.35`，通过后也只推进数据库生命周期，不自动注册为 `classroom_enabled`。
+
+首个 H7 固定试验为右肩俯仰相对当前姿态 `-0.07 rad`，不开放运行时关节名或幅度。先预演：
+
+```bash
+./scripts/r1ctl hardware-test right-shoulder-pitch --interface enp7s0
+```
+
+完成四句现场确认后执行：
+
+```bash
+./scripts/r1ctl hardware-test right-shoulder-pitch --interface enp7s0 --run --confirm START
+```
+
+真机程序还会再次等待输入 `START`，并监控全部 ArmSdk 电机温度、IMU 和右肩回位误差。小幅档为 `-0.07 rad`；小幅试验通过后，目标幅度档固定封顶为 `-0.20 rad`，使用 `--scale full`，不接受任意运行时幅度。
 
 当前外部 MJCF 缺 `head_pitch/head_yaw` 关节且含无效腕部接触排除项，因此 H14 本地权威复验会按设计失败。修复并锁定 `r1-edu-26dof-v1` 映射以前，不允许借用云端通过结果绕过此门禁。
 

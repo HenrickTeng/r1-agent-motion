@@ -19,3 +19,6 @@ target_link_libraries(r1_tts_say unitree_sdk2 fmt)
 
 add_executable(r1_safe_wrist_wave r1_safe_wrist_wave.cpp)
 target_link_libraries(r1_safe_wrist_wave unitree_sdk2 fmt)
+
+add_executable(r1_safe_right_shoulder_pitch_trial r1_safe_right_shoulder_pitch_trial.cpp)
+target_link_libraries(r1_safe_right_shoulder_pitch_trial unitree_sdk2 fmt)

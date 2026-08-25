@@ -34,3 +34,10 @@ def test_motion_binary_never_runs_without_confirmation():
     result = run_cli("hardware-test", "wrist-wave", "--run", env=env)
     assert result.returncode == 2
     assert json.loads(result.stdout)["motion_sent"] is False
+
+
+def test_shoulder_binary_never_runs_without_confirmation():
+    env = {**os.environ, "R1_SAFE_RIGHT_SHOULDER_PITCH_BIN": "/bin/true"}
+    result = run_cli("hardware-test", "right-shoulder-pitch", "--run", env=env)
+    assert result.returncode == 2
+    assert json.loads(result.stdout)["motion_sent"] is False

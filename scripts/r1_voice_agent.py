@@ -21,7 +21,7 @@ import httpx
 from apps.teacher_bridge.api import create_app
 from motion_core.agent.adapters import DeepSeekAdapter, LocalSafetyAdapter
 from motion_core.agent.service import AgentService
-from motion_core.voice import select_transcript
+from motion_core.voice import SupervisedHardwareTrialTools, select_transcript
 
 
 class HttpTools:
@@ -116,8 +116,38 @@ def main() -> int:
     parser.add_argument("--listen-timeout", type=int, default=30)
     parser.add_argument("--minimum-confidence", type=float, default=0.45)
     parser.add_argument("--cooldown", type=float, default=2.5)
+    parser.add_argument("--supervised-trial", choices=["wrist-full", "shoulder-full"])
+    parser.add_argument("--trial-confirmation", default="")
     args = parser.parse_args()
-    tools = HttpTools(args.bridge_url) if args.bridge_url else create_app().state.service
+    if args.supervised_trial:
+        if args.bridge_url:
+            parser.error("--supervised-trial cannot be combined with --bridge-url")
+        if not args.session_id:
+            parser.error("--supervised-trial requires --session-id")
+        trials = {
+            "wrist-full": (
+                "wrist_wave",
+                "移动右手腕关节",
+                ROOT / "build/hardware-tests/r1_safe_wrist_wave",
+            ),
+            "shoulder-full": (
+                "right_shoulder_pitch_trial",
+                "移动右肩关节",
+                ROOT / "build/hardware-tests/r1_safe_right_shoulder_pitch_trial",
+            ),
+        }
+        action_name, title, binary = trials[args.supervised_trial]
+        tools = SupervisedHardwareTrialTools(
+            action_name=action_name,
+            title=title,
+            binary=binary,
+            interface=args.interface,
+            scale="full",
+            authorized_session_id=args.session_id,
+            confirmation=args.trial_confirmation,
+        )
+    else:
+        tools = HttpTools(args.bridge_url) if args.bridge_url else create_app().state.service
     adapter = DeepSeekAdapter() if args.provider == "deepseek" else LocalSafetyAdapter()
     agent = AgentService(adapter, tools)
     try:

@@ -45,3 +45,21 @@ curl -X POST http://127.0.0.1:8765/v1/classroom-sessions \
 ```
 
 只有动作已显式注册为 `classroom_enabled`、计划双重校验通过、TTS 成功且命令行带 `--execute --session-id class-001` 时，Agent 才请求 Gateway。语音本身不是现场授权。
+
+## 教师现场监督硬件试验
+
+监督试验模式只用于已经完成小幅单关节资格测试后的目标幅度验收，不替代生产 Gateway 或课堂动作审批。一次进程只暴露一个固定动作、固定目标幅度和空参数，要求独立会话 ID、固定教师确认语和 `--execute`；同一进程最多执行一次。语音只选择本次已经预授权的动作，不能授权动作本身。
+
+右腕与右肩分别使用独立进程：
+
+```bash
+./scripts/r1_voice_agent.py --listen-once --provider rule --execute \
+  --supervised-trial wrist-full --session-id video-wrist-001 \
+  --trial-confirmation 'ENABLE SUPERVISED HARDWARE TRIAL'
+
+./scripts/r1_voice_agent.py --listen-once --provider rule --execute \
+  --supervised-trial shoulder-full --session-id video-shoulder-001 \
+  --trial-confirmation 'ENABLE SUPERVISED HARDWARE TRIAL'
+```
+
+固定语义分别为“移动右手腕关节”和“移动右肩关节”。Agent 生成严格单步 MotionPlan v2，TTS 成功后才调用固定二进制；二进制仍执行自身 `START`、温度、IMU、限位、回位和释放门禁。监督试验通过不会把动作设为 `classroom_enabled`。

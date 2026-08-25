@@ -19,6 +19,16 @@ def test_prompt_injection_and_forbidden_motion_produce_no_plan():
     assert result["motion_sent"] is False
 
 
+@pytest.mark.parametrize("text", ["介绍一下", "请介绍一下自己", "你好，请介绍一下自己", "您好，请介绍一下自己"])
+def test_local_agent_handles_greeting_and_self_introduction(text):
+    agent = AgentService(LocalSafetyAdapter(), EmptyTools())
+    result = agent.handle(text)
+    assert result["reply"] == "你好，我是R1课堂助手，很高兴和你一起学习具身智能。"
+    assert result["intent"] == "conversation"
+    assert result["plan"] is None
+    assert result["motion_sent"] is False
+
+
 def test_asr_accepts_latest_meaningful_non_final_message():
     output = '\n'.join([
         '{"text":"。","confidence":0.9,"is_final":false}',

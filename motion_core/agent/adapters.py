@@ -58,8 +58,8 @@ class LocalSafetyAdapter:
             return {"reply": "这个动作超出当前课堂安全范围，我不会让机器人运动。可以选择老师已验收的上肢手势。", "intent": "conversation", "plan": None, "design": None}
         if "停止" in compact or "取消" in compact:
             return {"reply": "我会请求停止当前任务。", "intent": "conversation", "plan": None, "design": None}
-        if "你好" in compact:
-            return {"reply": "你好，很高兴和你一起学习具身智能。", "intent": "conversation", "plan": None, "design": None}
+        if "你好" in compact or "您好" in compact or "介绍" in compact:
+            return {"reply": "你好，我是R1课堂助手，很高兴和你一起学习具身智能。", "intent": "conversation", "plan": None, "design": None}
         matching = next((action for action in enabled_actions if action["name"] in compact or action.get("title", "") in compact), None)
         if mode == "execute" and matching:
             return {
