@@ -89,6 +89,10 @@ def command_hardware_test(args: argparse.Namespace) -> int:
     command = [binary, args.interface]
     if args.case == "fsm-read":
         command = [binary, f"--network_interface={args.interface}", "--get_fsm_id", "--get_fsm_mode"]
+    elif args.case == "tts":
+        command = [binary, args.interface, args.text, "0"]
+    elif args.case == "wrist-wave":
+        command = [binary, args.interface, args.scale]
     completed = subprocess.run(command, check=False)
     emit({**preview, "exit_code": completed.returncode, "motion_sent": risk == "motion"})
     return completed.returncode
@@ -111,6 +115,8 @@ def build_parser() -> argparse.ArgumentParser:
     hardware.add_argument("--interface", default="enp7s0")
     hardware.add_argument("--run", action="store_true")
     hardware.add_argument("--confirm", default="")
+    hardware.add_argument("--text", default="语音测试成功。")
+    hardware.add_argument("--scale", choices=["small", "full"], default="small")
     hardware.set_defaults(handler=command_hardware_test)
     return parser
 

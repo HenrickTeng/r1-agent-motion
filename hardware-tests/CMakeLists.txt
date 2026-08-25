@@ -6,6 +6,7 @@ if(NOT UNITREE_SDK2_DIR)
   message(FATAL_ERROR "Set -DUNITREE_SDK2_DIR=/path/to/unitree_sdk2-main")
 endif()
 
+set(BUILD_EXAMPLES OFF CACHE BOOL "Disable external SDK examples" FORCE)
 add_subdirectory(${UNITREE_SDK2_DIR} unitree_sdk2_build EXCLUDE_FROM_ALL)
 add_executable(r1_arm_feedback_test r1_arm_feedback_test.cpp)
 target_link_libraries(r1_arm_feedback_test unitree_sdk2 fmt)
@@ -15,3 +16,6 @@ target_link_libraries(r1_asr_listener unitree_sdk2 fmt)
 
 add_executable(r1_tts_say r1_tts_say.cpp)
 target_link_libraries(r1_tts_say unitree_sdk2 fmt)
+
+add_executable(r1_safe_wrist_wave r1_safe_wrist_wave.cpp)
+target_link_libraries(r1_safe_wrist_wave unitree_sdk2 fmt)

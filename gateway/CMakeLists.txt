@@ -20,6 +20,26 @@ if(R1_GATEWAY_BUILD_GRPC)
   find_package(gRPC QUIET)
   if(Protobuf_FOUND AND gRPC_FOUND)
     message(STATUS "gRPC found; deployment transport generation is enabled")
+    set(PROTO_FILE ${CMAKE_CURRENT_SOURCE_DIR}/proto/r1_gateway.proto)
+    set(PROTO_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
+    file(MAKE_DIRECTORY ${PROTO_OUTPUT_DIR})
+    add_custom_command(
+      OUTPUT ${PROTO_OUTPUT_DIR}/r1_gateway.pb.cc ${PROTO_OUTPUT_DIR}/r1_gateway.pb.h
+             ${PROTO_OUTPUT_DIR}/r1_gateway.grpc.pb.cc ${PROTO_OUTPUT_DIR}/r1_gateway.grpc.pb.h
+      COMMAND protobuf::protoc
+      ARGS --proto_path=${CMAKE_CURRENT_SOURCE_DIR}/proto
+           --cpp_out=${PROTO_OUTPUT_DIR}
+           --grpc_out=${PROTO_OUTPUT_DIR}
+           --plugin=protoc-gen-grpc=$<TARGET_FILE:gRPC::grpc_cpp_plugin>
+           ${PROTO_FILE}
+      DEPENDS ${PROTO_FILE})
+    add_library(r1_gateway_proto
+      ${PROTO_OUTPUT_DIR}/r1_gateway.pb.cc
+      ${PROTO_OUTPUT_DIR}/r1_gateway.grpc.pb.cc)
+    target_include_directories(r1_gateway_proto PUBLIC ${PROTO_OUTPUT_DIR})
+    target_link_libraries(r1_gateway_proto PUBLIC protobuf::libprotobuf gRPC::grpc++)
+    add_executable(r1-gateway-grpc src/grpc_server.cpp)
+    target_link_libraries(r1-gateway-grpc PRIVATE r1_gateway_core r1_gateway_proto gRPC::grpc++)
   else()
     message(WARNING "gRPC C++ development packages not found; building fail-closed core only")
   endif()

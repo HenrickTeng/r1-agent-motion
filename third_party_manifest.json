@@ -10,6 +10,7 @@
     },
     "headers": {
       "include/unitree/dds_wrapper/robots/r1/r1.h": "461790d0d7ebabc7bfc565b71a827f3db0f791c0aefa03ca21823c8a668dbf8d",
+      "include/unitree/dds_wrapper/robots/r1/defines.h": "57d923f806b72609a396f154d3c2ea3d4bb5208a3986605be68539cce3909e97",
       "include/unitree/robot/r1/loco/r1_loco_client.hpp": "40147cd1e14d507c69cd9f89425c67927e2fcf97b408d925418f3dd7cf349fbe"
     }
   },
