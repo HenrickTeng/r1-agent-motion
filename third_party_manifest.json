@@ -1,0 +1,30 @@
+{
+  "manifest_version": "1.0",
+  "unitree_sdk2": {
+    "path_env": "UNITREE_SDK2_DIR",
+    "observed_path": "/home/henrick/unitree_sdk2-main",
+    "version": "2.0.0",
+    "libraries": {
+      "aarch64/libunitree_sdk2.a": "a084cc0087b6dc1b6361f874aabed8bd525f0574b3b2228f91b4b512e1bf035e",
+      "x86_64/libunitree_sdk2.a": "08402aea74150dfbfc3fbfded4ca746916a8d892b54d2bade0cbf392a3be4029"
+    },
+    "headers": {
+      "include/unitree/dds_wrapper/robots/r1/r1.h": "461790d0d7ebabc7bfc565b71a827f3db0f791c0aefa03ca21823c8a668dbf8d",
+      "include/unitree/robot/r1/loco/r1_loco_client.hpp": "40147cd1e14d507c69cd9f89425c67927e2fcf97b408d925418f3dd7cf349fbe"
+    }
+  },
+  "r1_mjcf": {
+    "path_env": "UNITREE_R1_MODEL_DIR",
+    "observed_source": "/home/henrick/unitree_rl_mjlab/src/assets/robots/unitree_r1/xmls/r1.xml",
+    "sha256": "19c2291ce675217cc193092e59726bbd8d21c53bd5b2599912b60fe538f2de5f",
+    "redistribution_license": "unconfirmed_external_reference_only"
+  },
+  "mujoco": {"python_version": "3.7.0"},
+  "deepseek": {"protocol": "OpenAI-compatible chat completions", "api_version": "observed-2026-08-25"},
+  "robot_software": {
+    "pc1_firmware": "record_on_deployment",
+    "ai_sport": "record_on_deployment",
+    "vui_service": "record_on_deployment",
+    "vui_module": "record_on_deployment"
+  }
+}

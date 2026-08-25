@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "r1-agent-motion"
+version = "0.2.0"
+description = "Safety-gated classroom motion platform for Unitree R1"
+requires-python = ">=3.11"
+dependencies = [
+  "alembic>=1.14,<2",
+  "fastapi>=0.115,<1",
+  "grpcio>=1.68,<2",
+  "jsonschema>=4.23,<5",
+  "mujoco>=3.2,<4",
+  "numpy>=2,<3",
+  "pydantic>=2.10,<3",
+  "sqlalchemy>=2.0,<3",
+  "uvicorn>=0.34,<1",
+]
+
+[project.optional-dependencies]
+dev = ["httpx>=0.28,<1", "pytest>=8.3,<9", "pytest-cov>=6,<7"]
+
+[project.scripts]
+r1ctl = "motion_core.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["motion_core*", "apps*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.coverage.run]
+source = ["motion_core"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 70
