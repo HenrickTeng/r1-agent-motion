@@ -3,11 +3,6 @@
 import json
 from pathlib import Path
 
-from sqlalchemy import select
-
-from apps.teacher_bridge.database import MotionRecord
-
-
 DEFAULT_LIBRARY = Path(__file__).resolve().parents[1] / "motion-library" / "actions.json"
 
 
@@ -22,6 +17,10 @@ def load_action_library(path: Path = DEFAULT_LIBRARY) -> dict:
 
 
 def seed_action_library(session_factory, path: Path = DEFAULT_LIBRARY) -> int:
+    from sqlalchemy import select
+
+    from apps.teacher_bridge.database import MotionRecord
+
     added = 0
     with session_factory() as session:
         for action in load_action_library(path)["actions"]:
