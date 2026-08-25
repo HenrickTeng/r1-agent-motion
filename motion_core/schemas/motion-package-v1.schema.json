@@ -1,0 +1,92 @@
+{
+  "$defs": {
+    "PackageFile": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "enum": [
+            "motion-design.json",
+            "trajectory.json",
+            "cloud-simulation-report.json",
+            "preview-animation.json"
+          ],
+          "title": "Path",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "size_bytes": {
+          "maximum": 20000000,
+          "minimum": 2,
+          "title": "Size Bytes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "size_bytes"
+      ],
+      "title": "PackageFile",
+      "type": "object"
+    }
+  },
+  "$id": "https://r1-motion.local/schemas/motion-package-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "created_at": {
+      "title": "Created At",
+      "type": "string"
+    },
+    "files": {
+      "items": {
+        "$ref": "#/$defs/PackageFile"
+      },
+      "maxItems": 4,
+      "minItems": 4,
+      "title": "Files",
+      "type": "array"
+    },
+    "integrity_notice": {
+      "const": "SHA256 integrity verified; source identity is not cryptographically authenticated.",
+      "title": "Integrity Notice",
+      "type": "string"
+    },
+    "motion_version": {
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "title": "Motion Version",
+      "type": "string"
+    },
+    "package_id": {
+      "pattern": "^[a-z0-9][a-z0-9._-]{2,63}$",
+      "title": "Package Id",
+      "type": "string"
+    },
+    "platform_approval_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Platform Approval Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "motion-package/v1",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "package_id",
+    "motion_version",
+    "created_at",
+    "platform_approval_id",
+    "files",
+    "integrity_notice"
+  ],
+  "title": "MotionPackageManifest",
+  "type": "object"
+}

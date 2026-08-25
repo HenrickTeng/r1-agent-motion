@@ -1,0 +1,256 @@
+{
+  "$defs": {
+    "EndEffectorTarget": {
+      "additionalProperties": false,
+      "properties": {
+        "frame": {
+          "const": "torso",
+          "default": "torso",
+          "title": "Frame",
+          "type": "string"
+        },
+        "position_m": {
+          "maxItems": 3,
+          "minItems": 3,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Position M",
+          "type": "array"
+        },
+        "quaternion_wxyz": {
+          "anyOf": [
+            {
+              "maxItems": 4,
+              "minItems": 4,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quaternion Wxyz"
+        },
+        "side": {
+          "enum": [
+            "left",
+            "right"
+          ],
+          "title": "Side",
+          "type": "string"
+        },
+        "time_s": {
+          "maximum": 30,
+          "minimum": 0,
+          "title": "Time S",
+          "type": "number"
+        }
+      },
+      "required": [
+        "side",
+        "time_s",
+        "position_m"
+      ],
+      "title": "EndEffectorTarget",
+      "type": "object"
+    },
+    "JointKeyframe": {
+      "additionalProperties": false,
+      "properties": {
+        "hold_s": {
+          "default": 0,
+          "maximum": 5,
+          "minimum": 0,
+          "title": "Hold S",
+          "type": "number"
+        },
+        "offsets": {
+          "items": {
+            "$ref": "#/$defs/JointOffset"
+          },
+          "maxItems": 13,
+          "minItems": 1,
+          "title": "Offsets",
+          "type": "array"
+        },
+        "time_s": {
+          "maximum": 30,
+          "minimum": 0,
+          "title": "Time S",
+          "type": "number"
+        }
+      },
+      "required": [
+        "time_s",
+        "offsets"
+      ],
+      "title": "JointKeyframe",
+      "type": "object"
+    },
+    "JointOffset": {
+      "additionalProperties": false,
+      "properties": {
+        "joint": {
+          "enum": [
+            "left_shoulder_pitch",
+            "left_shoulder_roll",
+            "left_shoulder_yaw",
+            "left_elbow",
+            "left_wrist_roll",
+            "right_shoulder_pitch",
+            "right_shoulder_roll",
+            "right_shoulder_yaw",
+            "right_elbow",
+            "right_wrist_roll",
+            "waist_yaw",
+            "head_pitch",
+            "head_yaw"
+          ],
+          "title": "Joint",
+          "type": "string"
+        },
+        "offset_rad": {
+          "title": "Offset Rad",
+          "type": "number"
+        }
+      },
+      "required": [
+        "joint",
+        "offset_rad"
+      ],
+      "title": "JointOffset",
+      "type": "object"
+    },
+    "ReturnPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "duration_s": {
+          "default": 1.5,
+          "maximum": 5,
+          "minimum": 0.8,
+          "title": "Duration S",
+          "type": "number"
+        },
+        "mode": {
+          "const": "return_to_initial",
+          "default": "return_to_initial",
+          "title": "Mode",
+          "type": "string"
+        }
+      },
+      "title": "ReturnPolicy",
+      "type": "object"
+    }
+  },
+  "$id": "https://r1-motion.local/schemas/motion-design-spec-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "end_effector_targets": {
+      "items": {
+        "$ref": "#/$defs/EndEffectorTarget"
+      },
+      "maxItems": 100,
+      "title": "End Effector Targets",
+      "type": "array"
+    },
+    "initial_pose_binding": {
+      "const": "relative_current",
+      "default": "relative_current",
+      "title": "Initial Pose Binding",
+      "type": "string"
+    },
+    "intent": {
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Intent",
+      "type": "string"
+    },
+    "joint_keyframes": {
+      "items": {
+        "$ref": "#/$defs/JointKeyframe"
+      },
+      "maxItems": 100,
+      "title": "Joint Keyframes",
+      "type": "array"
+    },
+    "motion_id": {
+      "pattern": "^[a-z0-9][a-z0-9._-]{2,63}$",
+      "title": "Motion Id",
+      "type": "string"
+    },
+    "repeat": {
+      "default": 1,
+      "maximum": 3,
+      "minimum": 1,
+      "title": "Repeat",
+      "type": "integer"
+    },
+    "return_policy": {
+      "$ref": "#/$defs/ReturnPolicy"
+    },
+    "safety_profile": {
+      "const": "classroom-upper-v1",
+      "default": "classroom-upper-v1",
+      "title": "Safety Profile",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "motion-design-spec/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "scope": {
+      "const": "upper_body",
+      "default": "upper_body",
+      "title": "Scope",
+      "type": "string"
+    },
+    "tempo": {
+      "default": "slow",
+      "enum": [
+        "slow",
+        "normal"
+      ],
+      "title": "Tempo",
+      "type": "string"
+    },
+    "title": {
+      "maxLength": 80,
+      "minLength": 1,
+      "title": "Title",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "motion_id",
+    "title",
+    "intent"
+  ],
+  "title": "MotionDesignSpec",
+  "type": "object"
+}
