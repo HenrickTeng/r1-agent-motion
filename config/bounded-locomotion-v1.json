@@ -1,0 +1,25 @@
+{
+  "version": "bounded-locomotion-v1",
+  "move_for": {
+    "maximum_abs_vx_mps": 0.15,
+    "maximum_abs_vy_mps": 0.1,
+    "maximum_duration_s": 2.0,
+    "stop_after_every_step": true,
+    "precision_distance_claim": false
+  },
+  "turn_relative": {
+    "maximum_abs_angle_deg": 30.0,
+    "maximum_rate_rad_s": 0.2,
+    "yaw_source": "rt/lowstate imu_state.rpy[2]",
+    "tolerance_deg": 1.5,
+    "timeout_s": 5.0,
+    "stop_after_every_step": true
+  },
+  "prohibited": [
+    "simultaneous_upper_body_motion",
+    "continuous_navigation",
+    "running",
+    "long_distance_motion",
+    "student_raw_velocity"
+  ]
+}
