@@ -122,6 +122,30 @@
       "classroom_enabled": false,
       "steps": ["say:introduction", "wave_right"],
       "parameters": {}
-    }
+    },
+    {"name":"wrist_wave_left","version":"0.1.0","title":"左手腕挥动","kind":"upper_body","lifecycle":"draft","classroom_enabled":false,"template":[{"time_s":2.0,"offsets":{"left_wrist_roll":-0.3},"hold_s":0.7}],"parameters":{}},
+    {"name":"shake_head","version":"0.1.0","title":"轻轻摇头","kind":"upper_body","lifecycle":"draft","classroom_enabled":false,"template":[{"time_s":1.5,"offsets":{"head_yaw":0.12}},{"time_s":2.5,"offsets":{"head_yaw":-0.12}}],"parameters":{"cycles":{"type":"integer","minimum":1,"maximum":2}}},
+    {"name":"listen_left","version":"0.1.0","title":"面向左侧聆听","kind":"upper_body","lifecycle":"draft","classroom_enabled":false,"template":[{"time_s":1.8,"offsets":{"head_yaw":0.15},"hold_s":1.0}],"parameters":{}},
+    {"name":"listen_right","version":"0.1.0","title":"面向右侧聆听","kind":"upper_body","lifecycle":"draft","classroom_enabled":false,"template":[{"time_s":1.8,"offsets":{"head_yaw":-0.15},"hold_s":1.0}],"parameters":{}},
+    {"name":"present_left","version":"0.1.0","title":"左手展示","kind":"upper_body","lifecycle":"draft","classroom_enabled":false,"template":[{"time_s":2.2,"offsets":{"left_shoulder_pitch":-0.12,"left_shoulder_roll":0.1,"left_elbow":0.15},"hold_s":1.0}],"parameters":{}},
+    {"name":"present_right","version":"0.1.0","title":"右手展示","kind":"upper_body","lifecycle":"draft","classroom_enabled":false,"template":[{"time_s":2.2,"offsets":{"right_shoulder_pitch":-0.12,"right_shoulder_roll":-0.1,"right_elbow":0.15},"hold_s":1.0}],"parameters":{}},
+    {"name":"hands_forward","version":"0.1.0","title":"双手向前展示","kind":"upper_body","lifecycle":"draft","classroom_enabled":false,"template":[{"time_s":2.3,"offsets":{"left_shoulder_pitch":-0.12,"right_shoulder_pitch":-0.12,"left_elbow":0.12,"right_elbow":0.12},"hold_s":0.8}],"parameters":{}},
+    {"name":"ready_pose","version":"0.1.0","title":"课堂准备姿态","kind":"upper_body","lifecycle":"draft","classroom_enabled":false,"template":[{"time_s":1.5,"offsets":{"left_wrist_roll":0.0,"right_wrist_roll":0.0}}],"parameters":{}},
+    {"name":"small_cheer","version":"0.1.0","title":"小幅鼓励手势","kind":"upper_body","lifecycle":"draft","classroom_enabled":false,"template":[{"time_s":2.5,"offsets":{"left_shoulder_pitch":-0.16,"right_shoulder_pitch":-0.16,"left_elbow":0.2,"right_elbow":0.2},"hold_s":0.7}],"parameters":{}},
+    {"name":"greet_student","version":"0.1.0","title":"问候学生","kind":"composition","lifecycle":"draft","classroom_enabled":false,"steps":["say:greeting","wave_right"],"parameters":{}},
+    {"name":"invite_answer","version":"0.1.0","title":"邀请回答","kind":"composition","lifecycle":"draft","classroom_enabled":false,"steps":["say:invite_answer","raise_hand_right"],"parameters":{}},
+    {"name":"correct_answer","version":"0.1.0","title":"回答正确","kind":"composition","lifecycle":"draft","classroom_enabled":false,"steps":["nod","small_cheer","say:praise"],"parameters":{}},
+    {"name":"try_again","version":"0.1.0","title":"鼓励再试一次","kind":"composition","lifecycle":"draft","classroom_enabled":false,"steps":["shake_head","open_arms","say:try_again"],"parameters":{}},
+    {"name":"lesson_start","version":"0.1.0","title":"开始上课","kind":"composition","lifecycle":"draft","classroom_enabled":false,"steps":["say:lesson_start","welcome","ready_pose"],"parameters":{}},
+    {"name":"lesson_end","version":"0.1.0","title":"结束课程","kind":"composition","lifecycle":"draft","classroom_enabled":false,"steps":["say:lesson_end","wave_right","ready_pose"],"parameters":{}},
+    {"name":"capability_demo","version":"0.1.0","title":"能力展示","kind":"composition","lifecycle":"draft","classroom_enabled":false,"steps":["look","wrist_wave","open_arms"],"parameters":{}},
+    {"name":"move_forward_slow","version":"0.1.0","title":"缓慢向前移动","kind":"locomotion_macro","lifecycle":"draft","classroom_enabled":false,"plan_template":[{"type":"move_for","vx_mps":0.08,"vy_mps":0.0,"duration_s":0.75}],"parameters":{}},
+    {"name":"move_backward_slow","version":"0.1.0","title":"缓慢向后移动","kind":"locomotion_macro","lifecycle":"draft","classroom_enabled":false,"plan_template":[{"type":"move_for","vx_mps":-0.06,"vy_mps":0.0,"duration_s":0.65}],"parameters":{}},
+    {"name":"move_left_slow","version":"0.1.0","title":"缓慢向左横移","kind":"locomotion_macro","lifecycle":"draft","classroom_enabled":false,"plan_template":[{"type":"move_for","vx_mps":0.0,"vy_mps":0.05,"duration_s":0.6}],"parameters":{}},
+    {"name":"move_right_slow","version":"0.1.0","title":"缓慢向右横移","kind":"locomotion_macro","lifecycle":"draft","classroom_enabled":false,"plan_template":[{"type":"move_for","vx_mps":0.0,"vy_mps":-0.05,"duration_s":0.6}],"parameters":{}},
+    {"name":"turn_left_10","version":"0.1.0","title":"向左转十度","kind":"locomotion_macro","lifecycle":"draft","classroom_enabled":false,"plan_template":[{"type":"turn_relative","angle_deg":10.0}],"parameters":{}},
+    {"name":"turn_right_10","version":"0.1.0","title":"向右转十度","kind":"locomotion_macro","lifecycle":"draft","classroom_enabled":false,"plan_template":[{"type":"turn_relative","angle_deg":-10.0}],"parameters":{}},
+    {"name":"turn_left_20","version":"0.1.0","title":"向左转二十度","kind":"locomotion_macro","lifecycle":"draft","classroom_enabled":false,"plan_template":[{"type":"turn_relative","angle_deg":20.0}],"parameters":{}},
+    {"name":"turn_right_20","version":"0.1.0","title":"向右转二十度","kind":"locomotion_macro","lifecycle":"draft","classroom_enabled":false,"plan_template":[{"type":"turn_relative","angle_deg":-20.0}],"parameters":{}}
   ]
 }

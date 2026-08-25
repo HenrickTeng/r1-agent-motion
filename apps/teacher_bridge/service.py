@@ -20,6 +20,7 @@ from motion_core.errors import ApprovalError, ContractError
 from motion_core.schemas import MotionPlan
 from motion_core.packages import MotionPackage, verify_package
 from motion_core.simulator import TrajectorySimulator
+from motion_core.library import expand_locomotion_macros
 
 
 class TeacherBridgeService:
@@ -50,8 +51,17 @@ class TeacherBridgeService:
             plan = MotionPlan.model_validate(payload)
         except Exception as error:
             return None, [str(error)]
-        enabled = {action["name"] for action in self.list_actions()}
-        return plan, self.gateway.validate_plan(plan, enabled)
+        with self.session_factory() as session:
+            records = session.scalars(
+                select(MotionRecord).where(MotionRecord.lifecycle == MotionLifecycle.CLASSROOM_ENABLED.value)
+            ).all()
+            registry = {record.motion_id: record.design for record in records}
+        try:
+            expanded = expand_locomotion_macros(plan, registry)
+        except ValueError as error:
+            return None, [str(error)]
+        enabled = set(registry)
+        return expanded, self.gateway.validate_plan(expanded, enabled)
 
     def execute_plan(self, payload: dict, session_id: str, idempotency_key: str) -> str:
         plan, errors = self.validate_plan(payload)
