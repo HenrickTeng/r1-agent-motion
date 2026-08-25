@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from pathlib import Path
 
 from sqlalchemy import select
 
@@ -17,6 +18,8 @@ from apps.teacher_bridge.database import (
 from apps.teacher_bridge.gateway_client import GatewayClient
 from motion_core.errors import ApprovalError, ContractError
 from motion_core.schemas import MotionPlan
+from motion_core.packages import MotionPackage, verify_package
+from motion_core.simulator import TrajectorySimulator
 
 
 class TeacherBridgeService:
@@ -132,3 +135,48 @@ class TeacherBridgeService:
             record.ended_at = datetime.now(timezone.utc)
             session.commit()
             return True
+
+    def validate_package(self, path: Path) -> MotionPackage:
+        return verify_package(path)
+
+    def import_package(self, path: Path) -> MotionRecord:
+        package = verify_package(path)
+        with self.session_factory() as session:
+            existing = session.scalar(
+                select(MotionRecord).where(
+                    MotionRecord.motion_id == package.manifest.package_id,
+                    MotionRecord.version == package.manifest.motion_version,
+                )
+            )
+            if existing is not None:
+                if existing.package_sha256 != package.archive_sha256:
+                    raise ContractError("package id/version already exists with different content")
+                return existing
+            record = MotionRecord(
+                motion_id=package.manifest.package_id,
+                version=package.manifest.motion_version,
+                title=package.design.title,
+                lifecycle=MotionLifecycle.IMPORTED.value,
+                trajectory_sha256=package.trajectory.trajectory_sha256,
+                package_sha256=package.archive_sha256,
+                design=package.design.model_dump(mode="json"),
+                cloud_report=package.cloud_report,
+            )
+            session.add(record)
+            session.commit()
+            return record
+
+    def simulate_package_local(self, database_id: int, package_path: Path, model_xml: Path | None):
+        package = verify_package(package_path)
+        with self.session_factory() as session:
+            record = session.get(MotionRecord, database_id)
+            if record is None:
+                raise LookupError("motion not found")
+            if record.package_sha256 != package.archive_sha256:
+                raise ContractError("selected package does not match imported record")
+            report = TrajectorySimulator(model_xml).run(package.trajectory)
+            record.local_report = report.model_dump(mode="json")
+            if report.passed:
+                record.lifecycle = MotionLifecycle.LOCAL_SIMULATION_PASSED.value
+            session.commit()
+            return report

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, ConfigDict
 
@@ -36,6 +38,15 @@ class ClassroomSessionRequest(StrictRequest):
     session_id: str
     operator: str
     confirmation: str
+
+
+class PackagePathRequest(StrictRequest):
+    path: str
+
+
+class LocalSimulationRequest(StrictRequest):
+    package_path: str
+    model_xml: str | None = None
 
 
 def create_app(database_url: str | None = None, gateway: GatewayClient | None = None) -> FastAPI:
@@ -106,6 +117,42 @@ def create_app(database_url: str | None = None, gateway: GatewayClient | None = 
         except R1MotionError as error:
             raise HTTPException(409, error.as_dict()) from error
         return {"id": record.id, "lifecycle": record.lifecycle}
+
+    @app.post("/v1/motions/packages:validate")
+    def motion_validate_package(request: PackagePathRequest) -> dict:
+        try:
+            package = service.validate_package(Path(request.path))
+        except R1MotionError as error:
+            raise HTTPException(422, error.as_dict()) from error
+        return {
+            "valid": True,
+            "package_id": package.manifest.package_id,
+            "archive_sha256": package.archive_sha256,
+            "source_authenticated": False,
+            "notice": package.manifest.integrity_notice,
+        }
+
+    @app.post("/v1/motions/packages:import")
+    def motion_import_package(request: PackagePathRequest) -> dict:
+        try:
+            record = service.import_package(Path(request.path))
+        except R1MotionError as error:
+            raise HTTPException(422, error.as_dict()) from error
+        return {"id": record.id, "lifecycle": record.lifecycle, "package_sha256": record.package_sha256}
+
+    @app.post("/v1/motions/{database_id}:simulate-local")
+    def motion_simulate_local(database_id: int, request: LocalSimulationRequest) -> dict:
+        try:
+            report = service.simulate_package_local(
+                database_id,
+                Path(request.package_path),
+                Path(request.model_xml) if request.model_xml else None,
+            )
+        except LookupError as error:
+            raise HTTPException(404, str(error)) from error
+        except R1MotionError as error:
+            raise HTTPException(409, error.as_dict()) from error
+        return report.model_dump(mode="json")
 
     return app
 
