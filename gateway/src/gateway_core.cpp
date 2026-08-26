@@ -6,7 +6,7 @@
 namespace r1::motion {
 namespace {
 constexpr double kMaxForwardVx = 0.5;
-constexpr double kMaxBackwardVx = 0.30;
+constexpr double kMaxBackwardVx = 0.50;
 constexpr double kMaxVy = 0.10;
 constexpr double kMaxMoveDuration = 2.0;
 constexpr double kMaxTurnDegrees = 30.0;

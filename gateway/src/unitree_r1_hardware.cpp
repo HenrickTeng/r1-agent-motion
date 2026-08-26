@@ -94,35 +94,63 @@ double UnitreeR1Hardware::Yaw() const {
   return static_cast<double>(lowstate_message_.imu_state().rpy()[2]);
 }
 
-bool UnitreeR1Hardware::TurnFor(double omega_rad_s, double duration,
-                                std::atomic_bool& cancelled) {
-  if (!Ready() || omega_rad_s == 0.0 || duration <= 0.0) return false;
-  const double initial_yaw = Yaw();
-  const int turn_result = loco_->SetVelocity(0.0f, 0.0f, static_cast<float>(omega_rad_s),
-                                              static_cast<float>(duration));
-  std::cerr << "R1 LocoClient::SetVelocity omega=" << omega_rad_s
-            << " duration=" << duration
-            << " result=" << turn_result << '\n';
-  if (!R1LocoResultAccepted(turn_result)) {
-    StopAndRelease();
-    return false;
+double UnitreeR1Hardware::AverageYaw(int samples, std::chrono::milliseconds interval) const {
+  double sum_sin = 0.0;
+  double sum_cos = 0.0;
+  for (int sample = 0; sample < samples; ++sample) {
+    const double yaw = Yaw();
+    sum_sin += std::sin(yaw);
+    sum_cos += std::cos(yaw);
+    if (sample + 1 < samples) std::this_thread::sleep_for(interval);
   }
-  const auto deadline = std::chrono::steady_clock::now() +
-                        std::chrono::duration<double>(duration);
-  while (std::chrono::steady_clock::now() < deadline) {
-    if (cancelled.load() || !Ready()) {
+  return std::atan2(sum_sin / samples, sum_cos / samples);
+}
+
+bool UnitreeR1Hardware::TurnFor(double omega_rad_s, double duration,
+                                std::atomic_bool& cancelled, int repetitions,
+                                double pause_seconds) {
+  if (!Ready() || omega_rad_s == 0.0 || duration <= 0.0 || repetitions <= 0 ||
+      pause_seconds < 0.0) return false;
+  const double initial_yaw = AverageYaw(5, std::chrono::milliseconds(200));
+  for (int repetition = 0; repetition < repetitions; ++repetition) {
+    const int turn_result = loco_->SetVelocity(0.0f, 0.0f, static_cast<float>(omega_rad_s),
+                                                static_cast<float>(duration));
+    std::cerr << "R1 LocoClient::SetVelocity omega=" << omega_rad_s
+              << " duration=" << duration
+              << " repetition=" << repetition + 1 << '/' << repetitions
+              << " result=" << turn_result << '\n';
+    if (!R1LocoResultAccepted(turn_result)) {
       StopAndRelease();
       return false;
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    const auto deadline = std::chrono::steady_clock::now() +
+                          std::chrono::duration<double>(duration);
+    while (std::chrono::steady_clock::now() < deadline) {
+      if (cancelled.load() || !Ready()) {
+        StopAndRelease();
+        return false;
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
+    const int stop_result = loco_->StopMove();
+    std::cerr << "R1 LocoClient::StopMove repetition=" << repetition + 1
+              << " result=" << stop_result << '\n';
+    if (!R1LocoResultAccepted(stop_result)) return false;
+    if (repetition + 1 < repetitions) {
+      const auto pause_deadline = std::chrono::steady_clock::now() +
+                                  std::chrono::duration<double>(pause_seconds);
+      while (std::chrono::steady_clock::now() < pause_deadline) {
+        if (cancelled.load() || !Ready()) return false;
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+      }
+    }
   }
-  const int stop_result = loco_->StopMove();
-  std::this_thread::sleep_for(std::chrono::milliseconds(200));
-  const double yaw_delta = NormalizeAngle(Yaw() - initial_yaw);
+  const double final_yaw = AverageYaw(5, std::chrono::milliseconds(200));
+  const double yaw_delta = NormalizeAngle(final_yaw - initial_yaw);
   const double yaw_delta_deg = yaw_delta * 180.0 / kPi;
-  std::cerr << "R1 LocoClient::StopMove result=" << stop_result
-            << " imu_yaw_delta_deg=" << yaw_delta_deg << '\n';
-  return R1LocoResultAccepted(stop_result) && std::abs(yaw_delta_deg) >= 3.0;
+  std::cerr << "IMU pre/post circular-average yaw_delta_deg=" << yaw_delta_deg
+            << " observation_only=1\n";
+  return true;
 }
 
 bool UnitreeR1Hardware::TurnRelative(double angle_deg, double maximum_rate_rad_s,

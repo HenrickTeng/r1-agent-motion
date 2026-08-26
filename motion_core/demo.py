@@ -38,16 +38,16 @@ DEMO_ACTIONS: dict[str, DemoAction] = {
     "shake_head": DemoAction("shake_head", "轻轻摇头", "head", {}),
     "listen_left": DemoAction("listen_left", "面向左侧聆听", "head", {}),
     "listen_right": DemoAction("listen_right", "面向右侧聆听", "head", {}),
-    "move_forward_slow": DemoAction("move_forward_slow", "向前走一步", "move", {"vx": 0.5, "vy": 0.0, "duration": 1.0}),
-    "move_backward_slow": DemoAction("move_backward_slow", "向后退一步", "move", {"vx": -0.3, "vy": 0.0, "duration": 1.0}),
+    "move_forward_slow": DemoAction("move_forward_slow", "向前走一步", "move", {"vx": 0.5, "vy": 0.0, "duration": 2.0}),
+    "move_backward_slow": DemoAction("move_backward_slow", "向后退一步", "move", {"vx": -0.5, "vy": 0.0, "duration": 2.0}),
     "move_left_slow": DemoAction("move_left_slow", "缓慢向左横移", "move", {"vx": 0.0, "vy": 0.05, "duration": 0.6}),
     "move_right_slow": DemoAction("move_right_slow", "缓慢向右横移", "move", {"vx": 0.0, "vy": -0.05, "duration": 0.6}),
     "turn_left_10": DemoAction("turn_left_10", "向左转十度", "turn", {"angle_deg": 10.0}),
     "turn_right_10": DemoAction("turn_right_10", "向右转十度", "turn", {"angle_deg": -10.0}),
     "turn_left_20": DemoAction("turn_left_20", "向左转二十度", "turn", {"angle_deg": 20.0}),
     "turn_right_20": DemoAction("turn_right_20", "向右转二十度", "turn", {"angle_deg": -20.0}),
-    "turn_left_rpc": DemoAction("turn_left_rpc", "向左转", "turn", {"omega": 0.5, "duration": 2.0}),
-    "turn_right_rpc": DemoAction("turn_right_rpc", "向右转", "turn", {"omega": -0.5, "duration": 2.0}),
+    "turn_left_rpc": DemoAction("turn_left_rpc", "向左转", "turn", {"omega": 0.6, "duration": 1.0, "repetitions": 3, "pause": 1.0}),
+    "turn_right_rpc": DemoAction("turn_right_rpc", "向右转", "turn", {"omega": -0.6, "duration": 1.0, "repetitions": 3, "pause": 1.0}),
 }
 
 SPEECH = {

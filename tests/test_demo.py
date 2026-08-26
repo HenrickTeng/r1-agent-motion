@@ -5,7 +5,7 @@ def test_plans_serial_walk_then_arm():
     assert [a.name for a in actions] == ["move_forward_slow", "turn_left_rpc", "wave_right"]
     backend = SimulatedBackend()
     DemoExecutor(backend).execute(actions)
-    assert backend.events == ["MOVE move_forward_slow {'vx': 0.5, 'vy': 0.0, 'duration': 1.0}", "STOP", "TURN turn_left_rpc {'omega': 0.5, 'duration': 2.0}", "STOP", "ARM wave_right", "STOP"]
+    assert backend.events == ["MOVE move_forward_slow {'vx': 0.5, 'vy': 0.0, 'duration': 2.0}", "STOP", "TURN turn_left_rpc {'omega': 0.6, 'duration': 1.0, 'repetitions': 3, 'pause': 1.0}", "STOP", "ARM wave_right", "STOP"]
 
 def test_rejects_unsafe_motion():
     reply, actions = DemoPlanner().plan("跳舞然后跑步")

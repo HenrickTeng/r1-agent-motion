@@ -17,7 +17,7 @@ def test_plan_accepts_only_public_step_union():
     {"type": "shell", "command": "echo unsafe"},
     {"type": "action", "action": "wave", "parameters": {}, "dds_topic": "rt/lowcmd"},
     {"type": "move_for", "vx_mps": 0.501, "vy_mps": 0, "duration_s": 1},
-    {"type": "move_for", "vx_mps": -0.301, "vy_mps": 0, "duration_s": 1},
+    {"type": "move_for", "vx_mps": -0.501, "vy_mps": 0, "duration_s": 1},
     {"type": "turn_relative", "angle_deg": 31},
 ])
 def test_plan_rejects_unknown_and_unsafe_fields(step):
@@ -40,5 +40,5 @@ def test_locomotion_macros_are_fixed_and_within_plan_limits():
     assert expanded.steps[0].type == "turn_relative" and expanded.steps[0].angle_deg == 10
     forward = next(action for action in macros if action["name"] == "move_forward_slow")
     assert forward["plan_template"] == [
-        {"type": "move_for", "vx_mps": 0.5, "vy_mps": 0.0, "duration_s": 1.0}
+        {"type": "move_for", "vx_mps": 0.5, "vy_mps": 0.0, "duration_s": 2.0}
     ]

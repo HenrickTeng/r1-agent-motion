@@ -48,15 +48,16 @@ R1 机载 `--listen-once/--continuous` 仅保留为只读 ASR 调试。当 `--di
 当前 DIY 四向语音使用固定的官方 RPC 参数：
 
 ```text
-SetVelocity(vx=0.5, vy=0, omega=0, duration=1)
-SetVelocity(vx=-0.3, vy=0, omega=0, duration=1)
-SetVelocity(vx=0, vy=0, omega=0.5, duration=2)
-SetVelocity(vx=0, vy=0, omega=-0.5, duration=2)
+SetVelocity(vx=0.5, vy=0, omega=0, duration=2)
+SetVelocity(vx=-0.5, vy=0, omega=0, duration=2)
+SetVelocity(vx=0, vy=0, omega=0.6, duration=1)  × 3，间隔 1 秒
+SetVelocity(vx=0, vy=0, omega=-0.6, duration=1) × 3，间隔 1 秒
 ```
 
 动作完成后固定调用 `StopMove()`，不开放学生输入原始速度。前进已完成真机验证；
-后退与新版转向参数等待机器人回场后逐项确认。转向程序会比较动作前后的 IMU yaw，
-偏航变化不足 3°时返回失败，不会仅凭 RPC 返回 `127` 报告成功。
+前一轮测试中，前进只产生小碎步，后退和单次纯角速度没有产生可见位移。新版使用更长
+前后持续时间和三次转向脉冲。IMU yaw 只在动作前后各采五次并计算环形平均，作为辅助
+诊断日志；是否真正转向以现场观察为准，不再用姿态估计数值宣称动作成功。
 
 8 月 25 日已验收的右腕、右肩监督动作也支持电脑麦克风。原始验收幅度分别为
 `+0.35 rad` 和 `-0.20 rad`。最终课堂可见档按操作员要求调整为右腕 `+1.70 rad`

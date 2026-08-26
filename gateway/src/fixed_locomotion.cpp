@@ -8,16 +8,16 @@
 namespace {
 struct Command { bool turn; double first; double second; double duration; };
 const std::map<std::string, Command> kCommands = {
-    {"move_forward_slow", {false, 0.5, 0.0, 1.0}},
-    {"move_backward_slow", {false, -0.30, 0.0, 1.0}},
+    {"move_forward_slow", {false, 0.5, 0.0, 2.0}},
+    {"move_backward_slow", {false, -0.50, 0.0, 2.0}},
     {"move_left_slow", {false, 0.0, 0.05, 0.60}},
     {"move_right_slow", {false, 0.0, -0.05, 0.60}},
     {"turn_left_10", {true, 10.0, 0.0, 0.0}},
     {"turn_right_10", {true, -10.0, 0.0, 0.0}},
     {"turn_left_20", {true, 20.0, 0.0, 0.0}},
     {"turn_right_20", {true, -20.0, 0.0, 0.0}},
-    {"turn_left_rpc", {true, 0.50, 0.0, 2.0}},
-    {"turn_right_rpc", {true, -0.50, 0.0, 2.0}},
+    {"turn_left_rpc", {true, 0.60, 0.0, 1.0}},
+    {"turn_right_rpc", {true, -0.60, 0.0, 1.0}},
 };
 }
 
@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
   std::atomic_bool cancelled{false};
   bool passed = command->second.turn
       ? (command->first == "turn_left_rpc" || command->first == "turn_right_rpc"
-             ? hardware.TurnFor(command->second.first, command->second.duration, cancelled)
+             ? hardware.TurnFor(command->second.first, command->second.duration, cancelled, 3, 1.0)
              : hardware.TurnRelative(command->second.first, 0.2, cancelled))
       : hardware.MoveFor(command->second.first, command->second.second,
                          command->second.duration, cancelled);

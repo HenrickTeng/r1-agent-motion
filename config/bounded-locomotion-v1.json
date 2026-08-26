@@ -2,7 +2,7 @@
   "version": "bounded-locomotion-v1",
   "move_for": {
     "maximum_forward_vx_mps": 0.5,
-    "maximum_backward_abs_vx_mps": 0.3,
+    "maximum_backward_abs_vx_mps": 0.5,
     "maximum_abs_vy_mps": 0.1,
     "maximum_duration_s": 2.0,
     "stop_after_every_step": true,

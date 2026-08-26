@@ -20,11 +20,13 @@ class UnitreeR1Hardware final : public RobotHardware {
   bool ExecuteInstalledAction(const std::string&, std::atomic_bool&) override;
   bool MoveFor(double, double, double, std::atomic_bool&) override;
   bool TurnRelative(double, double, std::atomic_bool&) override;
-  bool TurnFor(double omega_rad_s, double duration, std::atomic_bool& cancelled);
+  bool TurnFor(double omega_rad_s, double duration, std::atomic_bool& cancelled,
+               int repetitions = 1, double pause_seconds = 0.0);
   void StopAndRelease() noexcept override;
 
  private:
   double Yaw() const;
+  double AverageYaw(int samples, std::chrono::milliseconds interval) const;
   bool Ready(RobotStatus* status = nullptr);
 
   std::unique_ptr<unitree::robot::r1::LocoClient> loco_;
