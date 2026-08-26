@@ -135,7 +135,7 @@ class DdsRobot:
         self._tts.SetTimeout(10.0)
         self._tts.Init()
         self._loco = LocoClient()
-        self._loco.SetTimeout(2.0)
+        self._loco.SetTimeout(10.0)
         self._loco.Init()
 
     def _on_lowstate(self, msg) -> None:
@@ -253,6 +253,17 @@ class DdsRobot:
             self._release()
             raise
 
+    def _fsm_id(self) -> int | None:
+        from unitree_sdk2py.r1.loco.r1_loco_api import ROBOT_API_ID_LOCO_GET_FSM_ID
+        code, data = self._loco._Call(ROBOT_API_ID_LOCO_GET_FSM_ID, "{}")
+        if code != 0 or data in (None, ""):
+            return None
+        try:
+            payload = json.loads(data) if isinstance(data, str) else data
+            return int(payload["data"])
+        except (json.JSONDecodeError, TypeError, KeyError, ValueError):
+            return None
+
     def move(self, action: Action | str) -> None:
         name = action if isinstance(action, str) else action.name
         command = LOCO.get(name)
@@ -264,10 +275,16 @@ class DdsRobot:
             if stop not in (0, None):
                 raise RuntimeError(f"StopMove failed with code {stop}")
             return
+        fsm = self._fsm_id()
+        if fsm is not None and fsm != 811:
+            raise RuntimeError(
+                f"loco fsm_id={fsm}, need 811 walk/run mode. "
+                "Stand the robot, then press R2+A on the remote before walking."
+            )
         code = self._loco.SetVelocity(vx, vy, omega, duration)
         if code != 0:
             self._loco.StopMove()
-            raise RuntimeError(f"SetVelocity failed with code {code}")
+            raise RuntimeError(f"SetVelocity failed with code {code} fsm_id={fsm}")
         time.sleep(duration)
         stop = self._loco.StopMove()
         if stop not in (0, None):
