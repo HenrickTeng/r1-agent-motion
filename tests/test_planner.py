@@ -146,6 +146,14 @@ def test_deepseek_keeps_context_across_turns(monkeypatch):
     assert seen[1][-1]["content"] == "请按刚才的角色继续"
 
 
+def test_asr_prefers_final_over_later_partial():
+    output = "\n".join([
+        '{"text":"挥右手。","confidence":0.7,"is_final":true}',
+        '{"text":"右手。","confidence":0.9,"is_final":false}',
+    ])
+    assert select_transcript(output)["text"] == "挥右手。"
+
+
 def test_asr_accepts_latest_meaningful_non_final_message():
     output = "\n".join([
         '{"text":"。","confidence":0.9,"is_final":false}',

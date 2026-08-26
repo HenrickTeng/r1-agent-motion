@@ -197,23 +197,26 @@ class DdsRobot:
 
     def listen(self, timeout_s: int = 30, minimum_confidence: float = 0.45) -> str:
         self._audio_lines = []
-        accepted = None
-        last_change = None
+        last_count = 0
+        last_packet = None
+        selected = None
         deadline = time.time() + timeout_s
         while time.time() < deadline:
+            if len(self._audio_lines) != last_count:
+                last_count = len(self._audio_lines)
+                last_packet = time.time()
+                print(f"ASR packet: {self._audio_lines[-1]}", flush=True)
             try:
-                text = select_transcript("\n".join(self._audio_lines), minimum_confidence=minimum_confidence)["text"]
+                selected = select_transcript("\n".join(self._audio_lines), minimum_confidence=minimum_confidence)
             except ValueError:
-                text = None
-            if text and text != accepted:
-                accepted = text
-                last_change = time.time()
-                print(f"ASR draft: {text}", flush=True)
-            if accepted and last_change and time.time() - last_change >= 1.5:
-                return accepted
+                selected = None
+            if selected and selected.get("is_final") is True:
+                return selected["text"]
+            if selected and last_packet and time.time() - last_packet >= 2.5:
+                return selected["text"]
             time.sleep(0.05)
-        if accepted:
-            return accepted
+        if selected:
+            return selected["text"]
         sample = self._audio_lines[-3:] if self._audio_lines else []
         raise RuntimeError(
             "ASR timeout: enable microphone wake mode using the R1 app or remote. "
