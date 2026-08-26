@@ -67,3 +67,28 @@ def test_asr_accepts_latest_meaningful_non_final_message():
 def test_asr_rejects_low_confidence_and_no_speech():
     with pytest.raises(ValueError):
         select_transcript('{"text":"<|nospeech|>","confidence":0.9}\n{"text":"你好","confidence":0.2}')
+
+
+def test_asr_rejects_non_chinese_noise():
+    with pytest.raises(ValueError):
+        select_transcript('{"text":" 그片.","confidence":0.9,"is_final":false}')
+
+
+def test_classroom_aliases_and_new_gestures():
+    _, actions = RulePlanner().plan("打招呼然后鼓掌再加油")
+    assert [action.name for action in actions] == ["wave_right", "clap", "small_cheer"]
+
+
+def test_look_right_then_come_here():
+    _, actions = RulePlanner().plan("向右看然后过来")
+    assert [action.name for action in actions] == ["look_right", "come_here"]
+
+
+def test_wave_hand_alias_is_wave_right():
+    _, actions = RulePlanner().plan("挥手")
+    assert [action.name for action in actions] == ["wave_right"]
+
+
+def test_longest_alias_keeps_left_wave():
+    _, actions = RulePlanner().plan("挥左手")
+    assert [action.name for action in actions] == ["wave_left"]

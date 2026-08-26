@@ -21,36 +21,62 @@ def _offsets(**joints: float) -> tuple[float, ...]:
 
 
 MOTIONS: dict[str, list[tuple[float, tuple[float, ...], float]]] = {
-    "wrist_wave": [(2.0, _offsets(RWR=0.35), 1.0)],
-    "wrist_wave_left": [(2.0, _offsets(LWR=-0.30), 0.7)],
+    "wrist_wave": [
+        (1.2, _offsets(RWR=0.55), 0.05),
+        (0.45, _offsets(RWR=-0.45), 0.05),
+        (0.45, _offsets(RWR=0.55), 0.2),
+    ],
+    "wrist_wave_left": [
+        (1.2, _offsets(LWR=-0.55), 0.05),
+        (0.45, _offsets(LWR=0.45), 0.05),
+        (0.45, _offsets(LWR=-0.55), 0.2),
+    ],
     "wave_left": [
-        (1.8, _offsets(LSP=-0.42, LSR=0.18, LE=0.45), 0.15),
-        (0.55, _offsets(LSP=-0.42, LSR=0.18, LE=0.45, LWR=0.55), 0.05),
-        (0.55, _offsets(LSP=-0.42, LSR=0.18, LE=0.45, LWR=-0.40), 0.05),
-        (0.55, _offsets(LSP=-0.42, LSR=0.18, LE=0.45, LWR=0.55), 0.25),
+        (1.6, _offsets(LSP=-0.50, LSR=0.20, LE=0.48), 0.1),
+        (0.5, _offsets(LSP=-0.50, LSR=0.20, LE=0.48, LWR=0.65), 0.05),
+        (0.5, _offsets(LSP=-0.50, LSR=0.20, LE=0.48, LWR=-0.45), 0.05),
+        (0.5, _offsets(LSP=-0.50, LSR=0.20, LE=0.48, LWR=0.65), 0.2),
     ],
     "wave_right": [
-        (1.8, _offsets(RSP=-0.42, RSR=-0.18, RE=0.45), 0.15),
-        (0.55, _offsets(RSP=-0.42, RSR=-0.18, RE=0.45, RWR=0.55), 0.05),
-        (0.55, _offsets(RSP=-0.42, RSR=-0.18, RE=0.45, RWR=-0.40), 0.05),
-        (0.55, _offsets(RSP=-0.42, RSR=-0.18, RE=0.45, RWR=0.55), 0.25),
+        (1.6, _offsets(RSP=-0.50, RSR=-0.20, RE=0.48), 0.1),
+        (0.5, _offsets(RSP=-0.50, RSR=-0.20, RE=0.48, RWR=0.65), 0.05),
+        (0.5, _offsets(RSP=-0.50, RSR=-0.20, RE=0.48, RWR=-0.45), 0.05),
+        (0.5, _offsets(RSP=-0.50, RSR=-0.20, RE=0.48, RWR=0.65), 0.2),
     ],
-    "raise_hand_left": [(2.5, _offsets(LSP=-0.20, LSR=0.12, LE=0.20), 1.0)],
-    "raise_hand_right": [(2.5, _offsets(RSP=-0.20, RSR=-0.12, RE=0.20), 1.0)],
-    "salute_left": [(2.5, _offsets(LSP=-0.18, LSR=0.10, LE=0.28), 1.0)],
-    "salute_right": [(2.5, _offsets(RSP=-0.18, RSR=-0.10, RE=0.28), 1.0)],
-    "open_arms": [(2.5, _offsets(LSR=0.14, RSR=-0.14), 1.0)],
-    "nod": [(1.5, _offsets(HP=0.10), 0.2), (1.0, _offsets(HP=-0.06), 0.4)],
-    "look": [(1.8, _offsets(HY=0.15), 0.5)],
-    "shake_head": [(1.5, _offsets(HY=0.12), 0.2), (1.0, _offsets(HY=-0.12), 0.4)],
-    "listen_left": [(1.8, _offsets(HY=0.15), 1.0)],
-    "listen_right": [(1.8, _offsets(HY=-0.15), 1.0)],
-    "present_left": [(2.2, _offsets(LSP=-0.12, LSR=0.10, LE=0.15), 1.0)],
-    "present_right": [(2.2, _offsets(RSP=-0.12, RSR=-0.10, RE=0.15), 1.0)],
-    "hands_forward": [(2.3, _offsets(LSP=-0.12, RSP=-0.12, LE=0.12, RE=0.12), 0.8)],
-    "ready_pose": [(1.5, _offsets(), 0.3)],
-    "small_cheer": [(2.5, _offsets(LSP=-0.16, RSP=-0.16, LE=0.20, RE=0.20), 0.7)],
-    "dual_arm_gesture": [(2.0, _offsets(LSP=0.36, RSP=-0.36), 0.6), (1.5, _offsets(LSP=0.36, RSP=-0.36, LWR=0.72, RWR=-0.72), 0.8)],
+    "raise_hand_left": [(2.0, _offsets(LSP=-0.48, LSR=0.18, LE=0.32), 0.8)],
+    "raise_hand_right": [(2.0, _offsets(RSP=-0.48, RSR=-0.18, RE=0.32), 0.8)],
+    "salute_left": [(2.0, _offsets(LSP=-0.40, LSR=0.16, LE=0.55, LWR=0.20), 0.8)],
+    "salute_right": [(2.0, _offsets(RSP=-0.40, RSR=-0.16, RE=0.55, RWR=-0.20), 0.8)],
+    "open_arms": [(2.0, _offsets(LSR=0.38, RSR=-0.38, LE=0.18, RE=0.18), 0.8)],
+    "nod": [(1.1, _offsets(HP=0.20), 0.1), (0.8, _offsets(HP=-0.12), 0.15), (0.8, _offsets(HP=0.18), 0.2)],
+    "look": [(1.5, _offsets(HY=0.32), 0.6)],
+    "look_right": [(1.5, _offsets(HY=-0.32), 0.6)],
+    "shake_head": [(1.1, _offsets(HY=0.28), 0.08), (0.8, _offsets(HY=-0.28), 0.08), (0.8, _offsets(HY=0.22), 0.2)],
+    "listen_left": [(1.6, _offsets(HY=0.30, HP=0.06), 0.9)],
+    "listen_right": [(1.6, _offsets(HY=-0.30, HP=0.06), 0.9)],
+    "present_left": [(2.0, _offsets(LSP=-0.28, LSR=0.18, LE=0.28, HY=0.12), 0.8)],
+    "present_right": [(2.0, _offsets(RSP=-0.28, RSR=-0.18, RE=0.28, HY=-0.12), 0.8)],
+    "hands_forward": [(2.0, _offsets(LSP=-0.30, RSP=-0.30, LE=0.22, RE=0.22), 0.7)],
+    "ready_pose": [(1.2, _offsets(), 0.2)],
+    "small_cheer": [(1.8, _offsets(LSP=-0.42, RSP=-0.42, LE=0.32, RE=0.32), 0.5)],
+    "dual_arm_gesture": [(1.6, _offsets(LSP=0.40, RSP=-0.40), 0.4), (1.2, _offsets(LSP=0.40, RSP=-0.40, LWR=0.72, RWR=-0.72), 0.6)],
+    "clap": [
+        (1.4, _offsets(LSP=-0.24, RSP=-0.24, LSR=0.14, RSR=-0.14, LE=0.45, RE=0.45), 0.1),
+        (0.32, _offsets(LSP=-0.24, RSP=-0.24, LSR=0.14, RSR=-0.14, LE=0.45, RE=0.45, LWR=0.50, RWR=-0.50), 0.04),
+        (0.32, _offsets(LSP=-0.24, RSP=-0.24, LSR=0.14, RSR=-0.14, LE=0.45, RE=0.45, LWR=-0.28, RWR=0.28), 0.04),
+        (0.32, _offsets(LSP=-0.24, RSP=-0.24, LSR=0.14, RSR=-0.14, LE=0.45, RE=0.45, LWR=0.50, RWR=-0.50), 0.2),
+    ],
+    "come_here": [
+        (1.4, _offsets(RSP=-0.40, RSR=-0.14, RE=0.55), 0.08),
+        (0.4, _offsets(RSP=-0.40, RSR=-0.14, RE=0.28), 0.04),
+        (0.4, _offsets(RSP=-0.40, RSR=-0.14, RE=0.55), 0.04),
+        (0.4, _offsets(RSP=-0.40, RSR=-0.14, RE=0.28), 0.2),
+    ],
+    "point_left": [(1.8, _offsets(LSP=-0.34, LSR=0.24, LE=0.12, HY=0.22), 0.8)],
+    "point_right": [(1.8, _offsets(RSP=-0.34, RSR=-0.24, RE=0.12, HY=-0.22), 0.8)],
+    "stretch": [(2.2, _offsets(LSP=-0.52, RSP=-0.52, LE=0.12, RE=0.12), 0.7)],
+    "hug": [(1.5, _offsets(LSR=0.36, RSR=-0.36, LE=0.12, RE=0.12), 0.2), (1.3, _offsets(LSR=0.08, RSR=-0.08, LE=0.38, RE=0.38), 0.6)],
+    "akimbo": [(1.8, _offsets(LSR=0.30, RSR=-0.30, LE=0.52, RE=0.52), 0.8)],
 }
 
 LOCO = {
@@ -162,19 +188,28 @@ class DdsRobot:
 
     def listen(self, timeout_s: int = 30, minimum_confidence: float = 0.45) -> str:
         self._audio_lines = []
-        count = 0
-        last = None
+        accepted = None
+        last_change = None
         deadline = time.time() + timeout_s
         while time.time() < deadline:
-            if len(self._audio_lines) != count:
-                count = len(self._audio_lines)
-                last = time.time()
-            if last is not None and time.time() - last >= 1.5:
-                break
+            try:
+                text = select_transcript("\n".join(self._audio_lines), minimum_confidence=minimum_confidence)["text"]
+            except ValueError:
+                text = None
+            if text and text != accepted:
+                accepted = text
+                last_change = time.time()
+                print(f"ASR draft: {text}", flush=True)
+            if accepted and last_change and time.time() - last_change >= 1.5:
+                return accepted
             time.sleep(0.05)
-        if not self._audio_lines:
-            raise RuntimeError("ASR timeout: enable microphone wake mode using the R1 app or remote.")
-        return select_transcript("\n".join(self._audio_lines), minimum_confidence=minimum_confidence)["text"]
+        if accepted:
+            return accepted
+        sample = self._audio_lines[-3:] if self._audio_lines else []
+        raise RuntimeError(
+            "ASR timeout: enable microphone wake mode using the R1 app or remote. "
+            f"packets={len(self._audio_lines)} sample={sample}"
+        )
 
     def arm(self, action: Action | str) -> None:
         name = action if isinstance(action, str) else action.name

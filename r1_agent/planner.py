@@ -47,7 +47,7 @@ class RulePlanner:
                 if action not in found:
                     found.append(action)
         if not found:
-            return "我目前能执行挥手、敬礼、双手展示、缓慢移动和十度转向。", []
+            return "我目前能执行挥手、敬礼、鼓掌、点头、举手、缓慢移动和十度转向。", []
         return "好的，我会按顺序执行：" + "、".join(action.title for action in found), found
 
 

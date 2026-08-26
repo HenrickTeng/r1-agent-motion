@@ -1,4 +1,5 @@
 from r1_agent.catalog import load_catalog
+from r1_agent.dds_robot import LOCO, MOTIONS
 from r1_agent.hardware import R1Hardware
 
 
@@ -34,3 +35,12 @@ def test_wrist_wave_uses_same_runner():
     hardware = R1Hardware(robot=robot)
     hardware.arm(load_catalog().actions["wrist_wave"])
     assert robot.calls == [("arm", "wrist_wave")]
+
+
+def test_catalog_arm_and_loco_names_match_runners():
+    catalog = load_catalog()
+    for action in catalog.actions.values():
+        if action.kind == "arm":
+            assert action.name in MOTIONS
+        elif action.kind in ("move", "turn"):
+            assert action.name in LOCO

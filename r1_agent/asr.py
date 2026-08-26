@@ -10,6 +10,11 @@ from r1_agent.catalog import ROOT
 PUNCTUATION_ONLY = set(string.punctuation + "，。！？、；：‘’“”（）《》…")
 
 
+def _usable_text(text: str) -> bool:
+    compact = "".join(character for character in text if character not in PUNCTUATION_ONLY and not character.isspace())
+    return sum(1 for character in compact if "\u4e00" <= character <= "\u9fff") >= 2
+
+
 def select_transcript(output: str, *, minimum_confidence: float = 0.45) -> dict:
     candidates: list[dict] = []
     for line in output.splitlines():
@@ -22,7 +27,7 @@ def select_transcript(output: str, *, minimum_confidence: float = 0.45) -> dict:
         normalized = text.strip() if isinstance(text, str) else ""
         if (
             normalized
-            and not all(character in PUNCTUATION_ONLY for character in normalized)
+            and _usable_text(normalized)
             and "<|nospeech|>" not in normalized
             and isinstance(confidence, (int, float))
             and confidence >= minimum_confidence

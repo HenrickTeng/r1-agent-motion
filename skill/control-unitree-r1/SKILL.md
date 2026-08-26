@@ -22,11 +22,11 @@ python -m r1_agent --listen --continuous --deepseek --hardware --interface en5
 
 speech: `self_intro`
 
-arm/head: `wrist_wave`, `wrist_wave_left`, `wave_right`, `wave_left`, `hands_forward`, `open_arms`, `salute_right`, `salute_left`, `raise_hand_left`, `raise_hand_right`, `present_left`, `present_right`, `ready_pose`, `small_cheer`, `dual_arm_gesture`, `nod`, `look`, `shake_head`, `listen_left`, `listen_right`
+arm/head: `wrist_wave`, `wrist_wave_left`, `wave_right`, `wave_left`, `hands_forward`, `open_arms`, `salute_right`, `salute_left`, `raise_hand_left`, `raise_hand_right`, `present_left`, `present_right`, `ready_pose`, `small_cheer`, `dual_arm_gesture`, `nod`, `look`, `look_right`, `shake_head`, `listen_left`, `listen_right`, `clap`, `come_here`, `point_left`, `point_right`, `stretch`, `hug`, `akimbo`
 
 move/turn: `move_forward_slow`, `move_backward_slow`, `move_left_slow`, `move_right_slow`, `turn_left_10`, `turn_right_10`, `turn_left_20`, `turn_right_20`
 
-Compositions: 欢迎, 问候学生, 邀请回答, 回答正确, 再试一次, 开始上课, 结束课程, 能力展示.
+Compositions: 欢迎, 问候学生, 邀请回答, 回答正确, 再试一次, 开始上课, 结束课程, 能力展示, 鼓掌欢迎.
 
 ## Rules
 

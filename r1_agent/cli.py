@@ -48,6 +48,7 @@ def main(argv: list[str] | None = None) -> int:
             handle(" ".join(args.text), planner=planner, backend=backend, speak_reply=args.hardware)
             return 0
         while True:
+            print("Listening on R1 ASR. Speak now...", flush=True)
             handle(
                 robot.listen(timeout_s=args.listen_timeout),
                 planner=planner,
