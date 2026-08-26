@@ -23,8 +23,18 @@ def _offsets(**joints: float) -> tuple[float, ...]:
 MOTIONS: dict[str, list[tuple[float, tuple[float, ...], float]]] = {
     "wrist_wave": [(2.0, _offsets(RWR=0.35), 1.0)],
     "wrist_wave_left": [(2.0, _offsets(LWR=-0.30), 0.7)],
-    "wave_left": [(2.0, _offsets(LSP=-0.16, LE=0.25), 0.2), (1.0, _offsets(LSP=-0.16, LE=0.25, LWR=0.25), 0.7)],
-    "wave_right": [(2.0, _offsets(RSP=-0.16, RE=0.25), 0.2), (1.0, _offsets(RSP=-0.16, RE=0.25, RWR=0.25), 0.7)],
+    "wave_left": [
+        (1.8, _offsets(LSP=-0.42, LSR=0.18, LE=0.45), 0.15),
+        (0.55, _offsets(LSP=-0.42, LSR=0.18, LE=0.45, LWR=0.55), 0.05),
+        (0.55, _offsets(LSP=-0.42, LSR=0.18, LE=0.45, LWR=-0.40), 0.05),
+        (0.55, _offsets(LSP=-0.42, LSR=0.18, LE=0.45, LWR=0.55), 0.25),
+    ],
+    "wave_right": [
+        (1.8, _offsets(RSP=-0.42, RSR=-0.18, RE=0.45), 0.15),
+        (0.55, _offsets(RSP=-0.42, RSR=-0.18, RE=0.45, RWR=0.55), 0.05),
+        (0.55, _offsets(RSP=-0.42, RSR=-0.18, RE=0.45, RWR=-0.40), 0.05),
+        (0.55, _offsets(RSP=-0.42, RSR=-0.18, RE=0.45, RWR=0.55), 0.25),
+    ],
     "raise_hand_left": [(2.5, _offsets(LSP=-0.20, LSR=0.12, LE=0.20), 1.0)],
     "raise_hand_right": [(2.5, _offsets(RSP=-0.20, RSR=-0.12, RE=0.20), 1.0)],
     "salute_left": [(2.5, _offsets(LSP=-0.18, LSR=0.10, LE=0.28), 1.0)],

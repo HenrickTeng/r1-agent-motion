@@ -30,8 +30,8 @@ Pose O(std::initializer_list<std::pair<std::size_t,float>> values) {
 const std::map<std::string, Motion> kMotions = {
   {"wrist_wave", {{2.0f,O({{RWR,0.35f}}),1.0f}}},
   {"wrist_wave_left", {{2.0f,O({{LWR,-0.30f}}),0.7f}}},
-  {"wave_left", {{2.0f,O({{LSP,-0.16f},{LE,0.25f}}),0.2f},{1.0f,O({{LSP,-0.16f},{LE,0.25f},{LWR,0.25f}}),0.7f}}},
-  {"wave_right", {{2.0f,O({{RSP,-0.16f},{RE,0.25f}}),0.2f},{1.0f,O({{RSP,-0.16f},{RE,0.25f},{RWR,0.25f}}),0.7f}}},
+  {"wave_left", {{1.8f,O({{LSP,-0.42f},{LSR,0.18f},{LE,0.45f}}),0.15f},{0.55f,O({{LSP,-0.42f},{LSR,0.18f},{LE,0.45f},{LWR,0.55f}}),0.05f},{0.55f,O({{LSP,-0.42f},{LSR,0.18f},{LE,0.45f},{LWR,-0.40f}}),0.05f},{0.55f,O({{LSP,-0.42f},{LSR,0.18f},{LE,0.45f},{LWR,0.55f}}),0.25f}}},
+  {"wave_right", {{1.8f,O({{RSP,-0.42f},{RSR,-0.18f},{RE,0.45f}}),0.15f},{0.55f,O({{RSP,-0.42f},{RSR,-0.18f},{RE,0.45f},{RWR,0.55f}}),0.05f},{0.55f,O({{RSP,-0.42f},{RSR,-0.18f},{RE,0.45f},{RWR,-0.40f}}),0.05f},{0.55f,O({{RSP,-0.42f},{RSR,-0.18f},{RE,0.45f},{RWR,0.55f}}),0.25f}}},
   {"raise_hand_left", {{2.5f,O({{LSP,-0.20f},{LSR,0.12f},{LE,0.20f}}),1.0f}}},
   {"raise_hand_right", {{2.5f,O({{RSP,-0.20f},{RSR,-0.12f},{RE,0.20f}}),1.0f}}},
   {"salute_left", {{2.5f,O({{LSP,-0.18f},{LSR,0.10f},{LE,0.28f}}),1.0f}}},
