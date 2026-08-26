@@ -10,8 +10,8 @@ from r1_agent.hardware import R1Hardware
 from r1_agent.planner import DeepSeekPlanner, RulePlanner
 
 
-def _planner(deepseek: bool):
-    return DeepSeekPlanner() if deepseek else RulePlanner()
+def _planner(*, listen: bool, deepseek: bool):
+    return DeepSeekPlanner() if listen or deepseek else RulePlanner()
 
 
 def handle(text: str, *, planner, backend, speak_reply: bool) -> None:
@@ -37,7 +37,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.continuous and not args.listen:
         parser.error("--continuous requires --listen")
-    planner = _planner(args.deepseek)
+    planner = _planner(listen=args.listen, deepseek=args.deepseek)
     robot = None
     if args.hardware or args.listen:
         from r1_agent.dds_robot import DdsRobot

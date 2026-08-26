@@ -3,8 +3,15 @@ import json
 import pytest
 
 from r1_agent.asr import select_transcript
+from r1_agent.cli import _planner
 from r1_agent.executor import Executor, SimulatedBackend
 from r1_agent.planner import DeepSeekPlanner, RulePlanner, load_deepseek_key
+
+
+def test_listen_defaults_to_deepseek_planner():
+    assert isinstance(_planner(listen=True, deepseek=False), DeepSeekPlanner)
+    assert isinstance(_planner(listen=False, deepseek=False), RulePlanner)
+    assert isinstance(_planner(listen=False, deepseek=True), DeepSeekPlanner)
 
 
 def test_plans_serial_walk_then_arm():
@@ -116,6 +123,8 @@ def test_deepseek_prompt_is_general_composition(monkeypatch):
     monkeypatch.setattr("r1_agent.planner.request.urlopen", fake_open)
     planner.plan("随便说点什么")
     assert "原子动作" in captured["system"]
+    assert "ASR" in captured["system"]
+    assert "aliases" in captured["system"]
     assert "不要为某个场景写死套路" in captured["system"]
     assert "迎宾可用" not in captured["system"]
 

@@ -84,20 +84,27 @@ class DeepSeekPlanner:
         if not api_key:
             raise RuntimeError("DEEPSEEK_API_KEY is not set")
         names = [
-            {"name": action.name, "title": action.title, "kind": action.kind}
+            {
+                "name": action.name,
+                "title": action.title,
+                "kind": action.kind,
+                "aliases": list(action.aliases),
+            }
             for action in self.catalog.actions.values()
         ]
         forbidden = "、".join(self.catalog.forbidden)
         system = (
             "你是 Unitree R1 的动作规划器。任务是把用户的任意指示（具体口令、角色、情境或对话）"
             "编排成目录里已有原子动作的有序序列，不要为某个场景写死套路。"
+            "输入可能是机器人 ASR 的错字、漏字或同音误识别：先恢复最可能的中文意图，再编排。"
+            "短句优先对齐 aliases 的近音近形，不要扩写成用户没说的复杂动作。"
             "只输出 JSON：reply 是机器人要对面前的人说的中文，actions 是原子动作名数组。"
-            f"只能使用这些原子动作名：{json.dumps(names, ensure_ascii=False)}。"
+            f"只能使用这些原子动作：{json.dumps(names, ensure_ascii=False)}。"
             "按语义选择、排序和重复这些原子动作；需要几步就用几步，但不要无意义拉长。"
             "同一套原子动作要能服务不同任务，不要假设用户总是在迎宾或上课。"
             "上肢和行走必须串行：先走再挥手，或先挥手再走，不要假设能边走边做手势。"
             f"不要规划 {forbidden}，也不要发明关节角、DDS、LowCmd、代码或目录外动作名。"
-            "目录覆盖不了的要求：actions 为空，并在 reply 说明做不到。"
+            "完全无法判断或目录覆盖不了：actions 为空，并在 reply 说明。"
             "记住对话上下文，以便后续指示在已设定的角色或任务上继续组合。"
         )
         messages = [{"role": "system", "content": system}, *self._turns, {"role": "user", "content": text}]
