@@ -1,15 +1,37 @@
 ---
 name: control-unitree-r1
-description: Operate or design safe classroom motions for a Unitree R1 through the R1 Agent Motion Teacher Bridge. Use for student voice/text interaction, published gesture composition, bounded locomotion, capability checks, or upper-body motion design; excludes direct DDS, raw joints, full-body generation, dance, jump, bow, squat, and running.
+description: Map spoken or typed Chinese instructions to named Unitree R1 motions and run them over the robot Ethernet. Use when the user wants R1 to wave, salute, speak, turn, or chain classroom gestures; do not invent joints, DDS, or LowCmd.
 ---
 
 # Control Unitree R1
 
-Use the loopback Teacher Bridge as the only tool boundary. Never invoke DDS, SDK examples, hardware-test binaries, Shell commands, `LowCmd`, raw trajectory data, or runtime gains from a student request.
+Laptop on the robot Ethernet talks DDS directly. The model only chooses named actions from `actions.json`.
 
-Choose exactly one mode:
+## Run
 
-- **Execute mode:** Read [references/execute-mode.md](references/execute-mode.md). Converse or compose only actions returned by `robot.list_actions`; validate every `motion-plan/v2` before requesting execution.
-- **Design mode:** Read [references/design-mode.md](references/design-mode.md). Produce `motion-design-spec/v1`, compile and simulate revisions, but never request hardware execution or lifecycle approval.
+```bash
+python -m r1_agent --text "请介绍自己，然后挥右手"
+python -m r1_agent --text "挥右手然后敬礼" --hardware --interface enp7s0
+python -m r1_agent --listen --hardware --interface enp7s0
+python -m r1_agent --listen --continuous --deepseek --hardware --interface enp7s0
+```
 
-Read [references/safety-and-hardware.md](references/safety-and-hardware.md) before any operator-authorized hardware action or diagnostic. A spoken instruction is never operator authorization.
+`--listen` uses R1 ASR (`rt/audio_msg`). `--hardware` runs TTS, fixed arm motions, and loco binaries. Default planner is local rules; `--deepseek` needs `DEEPSEEK_API_KEY`.
+
+## Allowed actions
+
+speech: `self_intro`
+
+arm/head: `wrist_wave`, `wrist_wave_left`, `wave_right`, `wave_left`, `hands_forward`, `open_arms`, `salute_right`, `salute_left`, `raise_hand_left`, `raise_hand_right`, `present_left`, `present_right`, `ready_pose`, `small_cheer`, `dual_arm_gesture`, `nod`, `look`, `shake_head`, `listen_left`, `listen_right`
+
+move/turn: `move_forward_slow`, `move_backward_slow`, `move_left_slow`, `move_right_slow`, `turn_left_10`, `turn_right_10`, `turn_left_20`, `turn_right_20`
+
+Compositions: 欢迎, 问候学生, 邀请回答, 回答正确, 再试一次, 开始上课, 结束课程, 能力展示.
+
+## Rules
+
+- Plan a serial list of catalog names. Never output joint angles, `LowCmd`, DDS topics, Shell, or Python for the robot.
+- Reject 跳舞, 跳跃, 鞠躬, 下蹲, 跑步, 翻滚, and any name not in the catalog. Say it is not in the action library.
+- Upper-body and walking are serial, never overlapping.
+- If loco `SetVelocity` fails (this firmware has returned `127`), stop the rest of the plan and do not retry.
+- After TTS, wait before the next ASR turn so the robot does not hear itself.

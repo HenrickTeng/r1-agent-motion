@@ -1,8 +1,0 @@
-{
-  "name": "@r1-motion/platform-sdk",
-  "version": "1.0.0",
-  "type": "module",
-  "exports": "./src/index.ts",
-  "files": ["src", "schemas"],
-  "description": "Teaching-platform client with no robot-LAN or DDS access"
-}

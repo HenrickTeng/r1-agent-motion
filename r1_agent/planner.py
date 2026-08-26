@@ -1,0 +1,119 @@
+from __future__ import annotations
+
+import json
+import os
+import re
+from urllib import error, request
+
+from r1_agent.catalog import Action, Catalog, load_catalog
+
+
+def _speech_action(catalog: Catalog, key: str) -> Action:
+    text = catalog.speech[key]
+    return Action(name=f"say:{key}", title=text, kind="speech", args={"text": text})
+
+
+def _expand(catalog: Catalog, name: str) -> Action:
+    if name.startswith("say:"):
+        return _speech_action(catalog, name.split(":", 1)[1])
+    return catalog.actions[name]
+
+
+class RulePlanner:
+    def __init__(self, catalog: Catalog | None = None) -> None:
+        self.catalog = catalog or load_catalog()
+        self.forbidden = re.compile("|".join(map(re.escape, self.catalog.forbidden)))
+
+    def plan(self, text: str) -> tuple[str, list[Action]]:
+        compact = re.sub(r"\s+", "", text)
+        if self.forbidden.search(compact):
+            return "这个动作不在当前安全动作库中，我不会执行。", []
+        candidates: list[tuple[int, int, list[Action]]] = []
+        for phrase, name in self.catalog.aliases:
+            start = compact.find(phrase)
+            if start >= 0:
+                candidates.append((start, len(phrase), [_expand(self.catalog, name)]))
+        for phrase, steps in self.catalog.compositions.items():
+            start = compact.find(phrase)
+            if start >= 0:
+                candidates.append((start, len(phrase), [_expand(self.catalog, step) for step in steps]))
+        occupied = [False] * len(compact)
+        found: list[Action] = []
+        for start, length, group in sorted(candidates, key=lambda item: (item[0], -item[1])):
+            if any(occupied[start:start + length]):
+                continue
+            occupied[start:start + length] = [True] * length
+            for action in group:
+                if action not in found:
+                    found.append(action)
+        if not found:
+            return "我目前能执行挥手、敬礼、双手展示、缓慢移动和十度转向。", []
+        return "好的，我会按顺序执行：" + "、".join(action.title for action in found), found
+
+
+class DeepSeekPlanner:
+    def __init__(
+        self,
+        catalog: Catalog | None = None,
+        *,
+        api_url: str = "https://api.deepseek.com/chat/completions",
+        model: str = "deepseek-chat",
+        timeout_s: float = 20,
+    ) -> None:
+        self.catalog = catalog or load_catalog()
+        self.api_url = api_url
+        self.model = model
+        self.timeout_s = timeout_s
+        self.fallback = RulePlanner(self.catalog)
+
+    def plan(self, text: str) -> tuple[str, list[Action]]:
+        if self.fallback.forbidden.search(re.sub(r"\s+", "", text)):
+            return "这个动作不在当前安全动作库中，我不会执行。", []
+        api_key = os.getenv("DEEPSEEK_API_KEY")
+        if not api_key:
+            raise RuntimeError("DEEPSEEK_API_KEY is not set")
+        names = [
+            {"name": action.name, "title": action.title, "kind": action.kind}
+            for action in self.catalog.actions.values()
+        ]
+        system = (
+            "你是 Unitree R1 的动作规划器。只输出 JSON。"
+            "字段：reply 字符串，actions 字符串数组。"
+            f"只能使用这些动作名：{json.dumps(names, ensure_ascii=False)}。"
+            "把用户指令映射为已有动作的顺序组合。库中没有的要求必须拒绝，actions 为空。"
+            "禁止输出关节角、DDS、LowCmd、代码或库外动作名。"
+        )
+        body = json.dumps({
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": text},
+            ],
+            "response_format": {"type": "json_object"},
+            "temperature": 0.1,
+            "max_tokens": 800,
+        }).encode()
+        req = request.Request(
+            self.api_url,
+            data=body,
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with request.urlopen(req, timeout=self.timeout_s) as response:
+                envelope = json.loads(response.read())
+            payload = json.loads(envelope["choices"][0]["message"]["content"])
+        except (error.URLError, TimeoutError, KeyError, json.JSONDecodeError, IndexError, TypeError):
+            return self.fallback.plan(text)
+        names_in_plan = payload.get("actions") or []
+        if not isinstance(names_in_plan, list):
+            return self.fallback.plan(text)
+        actions: list[Action] = []
+        for name in names_in_plan:
+            if not isinstance(name, str) or name not in self.catalog.actions:
+                return "这个动作不在当前安全动作库中，我不会执行。", []
+            actions.append(self.catalog.actions[name])
+        reply = payload.get("reply")
+        if not isinstance(reply, str) or not reply.strip():
+            reply = "好的，我会按顺序执行：" + "、".join(action.title for action in actions) if actions else "我听到了。"
+        return reply, actions
