@@ -68,7 +68,52 @@ def test_deepseek_rejects_unknown_action_names(monkeypatch):
     assert planner._turns == []
 
 
-def test_deepseek_keeps_role_across_turns(monkeypatch):
+def test_deepseek_runs_composed_atom_sequence(monkeypatch):
+    planner = DeepSeekPlanner()
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "test")
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self):
+            return b'{"choices":[{"message":{"content":"{\\"reply\\":\\"ok\\",\\"actions\\":[\\"wave_right\\",\\"nod\\",\\"clap\\"]}"}}]}'
+
+    monkeypatch.setattr("r1_agent.planner.request.urlopen", lambda *args, **kwargs: FakeResponse())
+    _, actions = planner.plan("请按你的理解回应这个情境")
+    assert [action.name for action in actions] == ["wave_right", "nod", "clap"]
+
+
+def test_deepseek_prompt_is_general_composition(monkeypatch):
+    planner = DeepSeekPlanner()
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "test")
+    captured = {}
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self):
+            return b'{"choices":[{"message":{"content":"{\\"reply\\":\\"ok\\",\\"actions\\":[\\"wave_right\\"]}"}}]}'
+
+    def fake_open(req, timeout=None):
+        captured["system"] = json.loads(req.data.decode())["messages"][0]["content"]
+        return FakeResponse()
+
+    monkeypatch.setattr("r1_agent.planner.request.urlopen", fake_open)
+    planner.plan("随便说点什么")
+    assert "原子动作" in captured["system"]
+    assert "不要为某个场景写死套路" in captured["system"]
+    assert "迎宾可用" not in captured["system"]
+
+
+def test_deepseek_keeps_context_across_turns(monkeypatch):
     planner = DeepSeekPlanner()
     monkeypatch.setenv("DEEPSEEK_API_KEY", "test")
     seen: list[list] = []
@@ -81,19 +126,17 @@ def test_deepseek_keeps_role_across_turns(monkeypatch):
             return None
 
         def read(self):
-            return '{"choices":[{"message":{"content":"{\\"reply\\":\\"welcome\\",\\"actions\\":[\\"wave_right\\"]}"}}]}'.encode()
+            return b'{"choices":[{"message":{"content":"{\\"reply\\":\\"ok\\",\\"actions\\":[\\"wave_right\\"]}"}}]}'
 
     def fake_open(req, timeout=None):
         seen.append(json.loads(req.data.decode())["messages"])
         return FakeResponse()
 
     monkeypatch.setattr("r1_agent.planner.request.urlopen", fake_open)
-    _, first = planner.plan("你是校园迎宾机器人")
-    _, second = planner.plan("远处走来一个新生")
-    assert [action.name for action in first] == ["wave_right"]
-    assert [action.name for action in second] == ["wave_right"]
-    assert seen[1][1]["content"] == "你是校园迎宾机器人"
-    assert seen[1][-1]["content"] == "远处走来一个新生"
+    planner.plan("先记住你现在是课堂助手")
+    planner.plan("请按刚才的角色继续")
+    assert seen[1][1]["content"] == "先记住你现在是课堂助手"
+    assert seen[1][-1]["content"] == "请按刚才的角色继续"
 
 
 def test_asr_accepts_latest_meaningful_non_final_message():

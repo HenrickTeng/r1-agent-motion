@@ -80,8 +80,6 @@ class DeepSeekPlanner:
         self._turns: list[dict[str, str]] = []
 
     def plan(self, text: str) -> tuple[str, list[Action]]:
-        if self.fallback.forbidden.search(re.sub(r"\s+", "", text)):
-            return "这个动作不在当前安全动作库中，我不会执行。", []
         api_key = load_deepseek_key()
         if not api_key:
             raise RuntimeError("DEEPSEEK_API_KEY is not set")
@@ -91,12 +89,15 @@ class DeepSeekPlanner:
         ]
         forbidden = "、".join(self.catalog.forbidden)
         system = (
-            "你是 Unitree R1 的动作规划器。用户可能用角色和情境说话，而不是报动作名。"
-            "只输出 JSON：reply 是机器人要对面前的人说的中文，actions 是已有动作名的有序列表。"
-            f"只能使用这些动作名：{json.dumps(names, ensure_ascii=False)}。"
-            "根据语义选一个短序列，通常 1 到 4 步。迎宾可用挥手、张开双臂、点头、敬礼，再用 reply 说欢迎语。"
-            f"禁止 {forbidden}。库中没有的能力不要用其他名字冒充，此时 actions 为空并在 reply 说明。"
-            "记住对话里已设定的角色。禁止输出关节角、DDS、LowCmd、代码或库外动作名。"
+            "你是 Unitree R1 的动作规划器。任务是把用户的任意指示（具体口令、角色、情境或对话）"
+            "编排成目录里已有原子动作的有序序列，不要为某个场景写死套路。"
+            "只输出 JSON：reply 是机器人要对面前的人说的中文，actions 是原子动作名数组。"
+            f"只能使用这些原子动作名：{json.dumps(names, ensure_ascii=False)}。"
+            "按语义选择、排序和重复这些原子动作；需要几步就用几步，但不要无意义拉长。"
+            "同一套原子动作要能服务不同任务，不要假设用户总是在迎宾或上课。"
+            f"不要规划 {forbidden}，也不要发明关节角、DDS、LowCmd、代码或目录外动作名。"
+            "目录覆盖不了的要求：actions 为空，并在 reply 说明做不到。"
+            "记住对话上下文，以便后续指示在已设定的角色或任务上继续组合。"
         )
         messages = [{"role": "system", "content": system}, *self._turns, {"role": "user", "content": text}]
         body = json.dumps({
