@@ -77,17 +77,26 @@ MOTIONS: dict[str, list[tuple[float, tuple[float, ...], float]]] = {
     "stretch": [(2.2, _offsets(LSP=-0.52, RSP=-0.52, LE=0.12, RE=0.12), 0.7)],
     "hug": [(1.5, _offsets(LSR=0.36, RSR=-0.36, LE=0.12, RE=0.12), 0.2), (1.3, _offsets(LSR=0.08, RSR=-0.08, LE=0.38, RE=0.38), 0.6)],
     "akimbo": [(1.8, _offsets(LSR=0.30, RSR=-0.30, LE=0.52, RE=0.52), 0.8)],
+    "waist_left": [(1.5, _offsets(WY=0.35), 0.5)],
+    "waist_right": [(1.5, _offsets(WY=-0.35), 0.5)],
 }
 
 LOCO = {
     "move_forward_slow": (0.05, 0.0, 0.0, 0.5),
+    "move_forward_long": (0.05, 0.0, 0.0, 1.5),
     "move_backward_slow": (-0.05, 0.0, 0.0, 0.5),
+    "move_backward_long": (-0.05, 0.0, 0.0, 1.5),
     "move_left_slow": (0.0, 0.05, 0.0, 0.6),
     "move_right_slow": (0.0, -0.05, 0.0, 0.6),
     "turn_left_10": (0.0, 0.0, 0.35, 0.5),
     "turn_right_10": (0.0, 0.0, -0.35, 0.5),
     "turn_left_20": (0.0, 0.0, 0.35, 1.0),
     "turn_right_20": (0.0, 0.0, -0.35, 1.0),
+    "turn_left_45": (0.0, 0.0, 0.35, 2.25),
+    "turn_right_45": (0.0, 0.0, -0.35, 2.25),
+    "turn_left_90": (0.0, 0.0, 0.35, 4.5),
+    "turn_right_90": (0.0, 0.0, -0.35, 4.5),
+    "stop_move": (0.0, 0.0, 0.0, 0.0),
 }
 
 
@@ -238,6 +247,11 @@ class DdsRobot:
         if command is None:
             raise RuntimeError(f"unknown loco action: {name}")
         vx, vy, omega, duration = command
+        if duration <= 0:
+            stop = self._loco.StopMove()
+            if stop not in (0, None):
+                raise RuntimeError(f"StopMove failed with code {stop}")
+            return
         code = self._loco.SetVelocity(vx, vy, omega, duration)
         if code != 0:
             self._loco.StopMove()

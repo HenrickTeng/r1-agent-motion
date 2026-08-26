@@ -49,13 +49,22 @@
     {"name": "stretch", "title": "伸懒腰", "kind": "arm", "aliases": ["伸懒腰"]},
     {"name": "hug", "title": "拥抱手势", "kind": "arm", "aliases": ["拥抱"]},
     {"name": "akimbo", "title": "双手叉腰", "kind": "arm", "aliases": ["双手叉腰", "叉腰"]},
-    {"name": "move_forward_slow", "title": "缓慢向前移动", "kind": "move", "args": {"vx": 0.05, "vy": 0.0, "omega": 0.0, "duration": 0.5}, "aliases": ["向前"]},
-    {"name": "move_backward_slow", "title": "缓慢向后移动", "kind": "move", "args": {"vx": -0.05, "vy": 0.0, "omega": 0.0, "duration": 0.5}, "aliases": ["向后"]},
-    {"name": "move_left_slow", "title": "缓慢向左横移", "kind": "move", "args": {"vx": 0.0, "vy": 0.05, "omega": 0.0, "duration": 0.6}, "aliases": ["向左横移"]},
-    {"name": "move_right_slow", "title": "缓慢向右横移", "kind": "move", "args": {"vx": 0.0, "vy": -0.05, "omega": 0.0, "duration": 0.6}, "aliases": ["向右横移"]},
+    {"name": "waist_left", "title": "腰向左转", "kind": "arm", "aliases": ["向左转腰", "腰左转"]},
+    {"name": "waist_right", "title": "腰向右转", "kind": "arm", "aliases": ["向右转腰", "腰右转"]},
+    {"name": "move_forward_slow", "title": "缓慢向前移动", "kind": "move", "args": {"vx": 0.05, "vy": 0.0, "omega": 0.0, "duration": 0.5}, "aliases": ["向前", "走一步", "向前走"]},
+    {"name": "move_forward_long", "title": "缓慢向前多走两步", "kind": "move", "args": {"vx": 0.05, "vy": 0.0, "omega": 0.0, "duration": 1.5}, "aliases": ["向前走两步", "多走两步"]},
+    {"name": "move_backward_slow", "title": "缓慢向后移动", "kind": "move", "args": {"vx": -0.05, "vy": 0.0, "omega": 0.0, "duration": 0.5}, "aliases": ["向后", "后退"]},
+    {"name": "move_backward_long", "title": "缓慢向后多退两步", "kind": "move", "args": {"vx": -0.05, "vy": 0.0, "omega": 0.0, "duration": 1.5}, "aliases": ["向后退两步"]},
+    {"name": "move_left_slow", "title": "缓慢向左横移", "kind": "move", "args": {"vx": 0.0, "vy": 0.05, "omega": 0.0, "duration": 0.6}, "aliases": ["向左横移", "左移"]},
+    {"name": "move_right_slow", "title": "缓慢向右横移", "kind": "move", "args": {"vx": 0.0, "vy": -0.05, "omega": 0.0, "duration": 0.6}, "aliases": ["向右横移", "右移"]},
     {"name": "turn_left_10", "title": "向左转十度", "kind": "turn", "args": {"vx": 0.0, "vy": 0.0, "omega": 0.35, "duration": 0.5}, "aliases": ["向左转"]},
     {"name": "turn_right_10", "title": "向右转十度", "kind": "turn", "args": {"vx": 0.0, "vy": 0.0, "omega": -0.35, "duration": 0.5}, "aliases": ["向右转"]},
     {"name": "turn_left_20", "title": "向左转二十度", "kind": "turn", "args": {"vx": 0.0, "vy": 0.0, "omega": 0.35, "duration": 1.0}, "aliases": ["向左转二十度"]},
-    {"name": "turn_right_20", "title": "向右转二十度", "kind": "turn", "args": {"vx": 0.0, "vy": 0.0, "omega": -0.35, "duration": 1.0}, "aliases": ["向右转二十度"]}
+    {"name": "turn_right_20", "title": "向右转二十度", "kind": "turn", "args": {"vx": 0.0, "vy": 0.0, "omega": -0.35, "duration": 1.0}, "aliases": ["向右转二十度"]},
+    {"name": "turn_left_45", "title": "向左转四十五度", "kind": "turn", "args": {"vx": 0.0, "vy": 0.0, "omega": 0.35, "duration": 2.25}, "aliases": ["向左转四十五度"]},
+    {"name": "turn_right_45", "title": "向右转四十五度", "kind": "turn", "args": {"vx": 0.0, "vy": 0.0, "omega": -0.35, "duration": 2.25}, "aliases": ["向右转四十五度"]},
+    {"name": "turn_left_90", "title": "向左转九十度", "kind": "turn", "args": {"vx": 0.0, "vy": 0.0, "omega": 0.35, "duration": 4.5}, "aliases": ["向左转九十度"]},
+    {"name": "turn_right_90", "title": "向右转九十度", "kind": "turn", "args": {"vx": 0.0, "vy": 0.0, "omega": -0.35, "duration": 4.5}, "aliases": ["向右转九十度"]},
+    {"name": "stop_move", "title": "停下", "kind": "move", "args": {"vx": 0.0, "vy": 0.0, "omega": 0.0, "duration": 0.0}, "aliases": ["停下", "站住", "别走"]}
   ]
 }

@@ -56,6 +56,8 @@ const std::map<std::string, Motion> kMotions = {
   {"stretch", {{2.2f,O({{LSP,-0.52f},{RSP,-0.52f},{LE,0.12f},{RE,0.12f}}),0.7f}}},
   {"hug", {{1.5f,O({{LSR,0.36f},{RSR,-0.36f},{LE,0.12f},{RE,0.12f}}),0.2f},{1.3f,O({{LSR,0.08f},{RSR,-0.08f},{LE,0.38f},{RE,0.38f}}),0.6f}}},
   {"akimbo", {{1.8f,O({{LSR,0.30f},{RSR,-0.30f},{LE,0.52f},{RE,0.52f}}),0.8f}}},
+  {"waist_left", {{1.5f,O({{WY,0.35f}}),0.5f}}},
+  {"waist_right", {{1.5f,O({{WY,-0.35f}}),0.5f}}},
 };
 
 float Blend(float x) { return 10*std::pow(x,3)-15*std::pow(x,4)+6*std::pow(x,5); }

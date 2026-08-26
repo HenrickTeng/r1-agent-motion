@@ -22,9 +22,9 @@ python -m r1_agent --listen --continuous --deepseek --hardware --interface en5
 
 speech: `self_intro`
 
-arm/head: `wrist_wave`, `wrist_wave_left`, `wave_right`, `wave_left`, `hands_forward`, `open_arms`, `salute_right`, `salute_left`, `raise_hand_left`, `raise_hand_right`, `present_left`, `present_right`, `ready_pose`, `small_cheer`, `dual_arm_gesture`, `nod`, `look`, `look_right`, `shake_head`, `listen_left`, `listen_right`, `clap`, `come_here`, `point_left`, `point_right`, `stretch`, `hug`, `akimbo`
+arm/head: `wrist_wave`, `wrist_wave_left`, `wave_right`, `wave_left`, `hands_forward`, `open_arms`, `salute_right`, `salute_left`, `raise_hand_left`, `raise_hand_right`, `present_left`, `present_right`, `ready_pose`, `small_cheer`, `dual_arm_gesture`, `nod`, `look`, `look_right`, `shake_head`, `listen_left`, `listen_right`, `clap`, `come_here`, `point_left`, `point_right`, `stretch`, `hug`, `akimbo`, `waist_left`, `waist_right`
 
-move/turn: `move_forward_slow`, `move_backward_slow`, `move_left_slow`, `move_right_slow`, `turn_left_10`, `turn_right_10`, `turn_left_20`, `turn_right_20`
+move/turn: `move_forward_slow`, `move_forward_long`, `move_backward_slow`, `move_backward_long`, `move_left_slow`, `move_right_slow`, `turn_left_10`, `turn_right_10`, `turn_left_20`, `turn_right_20`, `turn_left_45`, `turn_right_45`, `turn_left_90`, `turn_right_90`, `stop_move`
 
 Compositions: 欢迎, 问候学生, 邀请回答, 回答正确, 再试一次, 开始上课, 结束课程, 能力展示, 鼓掌欢迎.
 

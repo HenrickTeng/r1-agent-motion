@@ -27,6 +27,13 @@ def test_longest_alias_wins_for_twenty_degree_turn():
     assert [action.name for action in actions] == ["turn_left_20"]
 
 
+def test_loco_aliases_and_waist():
+    _, actions = RulePlanner().plan("向前走两步然后向左转四十五度再停下")
+    assert [action.name for action in actions] == ["move_forward_long", "turn_left_45", "stop_move"]
+    _, waist = RulePlanner().plan("向左转腰")
+    assert [action.name for action in waist] == ["waist_left"]
+
+
 def test_rejects_unsafe_motion():
     reply, actions = RulePlanner().plan("跳舞然后鞠躬")
     assert actions == []
