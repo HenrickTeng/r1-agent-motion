@@ -41,3 +41,9 @@ def test_shoulder_binary_never_runs_without_confirmation():
     result = run_cli("hardware-test", "right-shoulder-pitch", "--run", env=env)
     assert result.returncode == 2
     assert json.loads(result.stdout)["motion_sent"] is False
+
+
+def test_collision_scan_rejects_missing_action_file(tmp_path):
+    result = run_cli("collision-scan", "--model", str(tmp_path / "missing.xml"), "--file", str(tmp_path / "missing.json"))
+    assert result.returncode == 2
+    assert json.loads(result.stdout)["hardware_authorized"] is False

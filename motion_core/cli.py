@@ -9,6 +9,7 @@ import subprocess
 from motion_core.config import Settings
 from motion_core.library import load_action_library
 from motion_core.schemas import MotionPlan
+from motion_core.simulator.collision_warning import scan_action_file
 
 
 def emit(value: dict | list) -> None:
@@ -61,6 +62,22 @@ def command_probe(args: argparse.Namespace) -> int:
     return 0
 
 
+def command_collision_scan(args: argparse.Namespace) -> int:
+    try:
+        report = scan_action_file(
+            Path(args.model),
+            Path(args.file),
+            warning_distance_m=args.warning_mm / 1000,
+            danger_distance_m=args.danger_mm / 1000,
+            sample_hz=args.sample_hz,
+        )
+    except Exception as error:
+        emit({"valid": False, "hardware_authorized": False, "errors": [str(error)]})
+        return 2
+    emit(report)
+    return 0 if report["passed"] else 2
+
+
 HARDWARE_CASES = {
     "fsm-read": ("R1_LOCO_CLIENT_BIN", "read_only"),
     "lowstate-read": ("R1_ARM_FEEDBACK_TEST_BIN", "read_only"),
@@ -111,6 +128,13 @@ def build_parser() -> argparse.ArgumentParser:
     probe = subparsers.add_parser("probe")
     probe.add_argument("--interface")
     probe.set_defaults(handler=command_probe)
+    simulate = subparsers.add_parser("collision-scan")
+    simulate.add_argument("--model", required=True)
+    simulate.add_argument("--file", required=True, help="degree-based named multi-joint action JSON")
+    simulate.add_argument("--warning-mm", type=float, default=50)
+    simulate.add_argument("--danger-mm", type=float, default=10)
+    simulate.add_argument("--sample-hz", type=int, default=50)
+    simulate.set_defaults(handler=command_collision_scan)
     hardware = subparsers.add_parser("hardware-test")
     hardware.add_argument("case", choices=["list", *HARDWARE_CASES])
     hardware.add_argument("--interface", default="enp7s0")

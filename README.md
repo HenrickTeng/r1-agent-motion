@@ -32,6 +32,8 @@ ctest --test-dir build/gateway --output-on-failure
 
 服务入口、协议、模型审计、硬件门禁和平台集成说明位于 `docs/`。真实机器人测试必须使用 `hardware-tests/` 的单项程序，并严格遵循 `docs/hardware-test-workflow.md`。
 
+离线简化碰撞预警和角度制多关节动作文件见 `docs/collision-warning.md`；碰撞扫描只产生预警，不授权真机执行。
+
 ## 安全边界
 
 - Agent 执行模式只能组合 `classroom_enabled` 动作。
