@@ -23,7 +23,7 @@
     {"name": "self_intro", "title": "自我介绍", "kind": "speech", "args": {"text": "你好，我是 R1 课堂助手，很高兴和你一起学习具身智能。"}, "aliases": ["介绍自己", "自我介绍"]},
     {"name": "wrist_wave", "title": "右手腕挥动", "kind": "arm", "aliases": ["右手腕"]},
     {"name": "wrist_wave_left", "title": "左手腕挥动", "kind": "arm", "aliases": ["左手腕"]},
-    {"name": "wave_right", "title": "右手挥手", "kind": "arm", "aliases": ["挥右手", "挥手", "打招呼", "再见"]},
+    {"name": "wave_right", "title": "右手挥手", "kind": "arm", "aliases": ["挥右手", "挥手", "打招呼", "再见", "右手"]},
     {"name": "wave_left", "title": "左手挥手", "kind": "arm", "aliases": ["挥左手"]},
     {"name": "hands_forward", "title": "双手向前展示", "kind": "arm", "aliases": ["双手向前", "双手展示"]},
     {"name": "open_arms", "title": "张开双臂", "kind": "arm", "aliases": ["张开双臂", "双手打开"]},

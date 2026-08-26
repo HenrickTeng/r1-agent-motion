@@ -33,7 +33,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--hardware", action="store_true")
     parser.add_argument("--interface", default="en5")
     parser.add_argument("--listen-timeout", type=int, default=30)
-    parser.add_argument("--cooldown", type=float, default=2.5)
+    parser.add_argument("--cooldown", type=float, default=4.0)
     args = parser.parse_args(argv)
     if args.continuous and not args.listen:
         parser.error("--continuous requires --listen")

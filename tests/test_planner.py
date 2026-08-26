@@ -125,6 +125,8 @@ def test_deepseek_prompt_is_general_composition(monkeypatch):
     assert "原子动作" in captured["system"]
     assert "ASR" in captured["system"]
     assert "aliases" in captured["system"]
+    assert "wave_right" in captured["system"]
+    assert "wrist_wave" in captured["system"]
     assert "不要为某个场景写死套路" in captured["system"]
     assert "迎宾可用" not in captured["system"]
 
@@ -191,9 +193,19 @@ def test_look_right_then_come_here():
     assert [action.name for action in actions] == ["look_right", "come_here"]
 
 
+def test_right_hand_alias_is_full_wave():
+    _, actions = RulePlanner().plan("右手")
+    assert [action.name for action in actions] == ["wave_right"]
+
+
 def test_wave_hand_alias_is_wave_right():
     _, actions = RulePlanner().plan("挥手")
     assert [action.name for action in actions] == ["wave_right"]
+
+
+def test_right_hand_salute_still_wins():
+    _, actions = RulePlanner().plan("右手敬礼")
+    assert [action.name for action in actions] == ["salute_right"]
 
 
 def test_longest_alias_keeps_left_wave():
