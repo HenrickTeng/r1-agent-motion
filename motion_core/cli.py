@@ -131,7 +131,7 @@ def build_parser() -> argparse.ArgumentParser:
     simulate = subparsers.add_parser("collision-scan")
     simulate.add_argument("--model", required=True)
     simulate.add_argument("--file", required=True, help="degree-based named multi-joint action JSON")
-    simulate.add_argument("--warning-mm", type=float, default=50)
+    simulate.add_argument("--warning-mm", type=float, default=30)
     simulate.add_argument("--danger-mm", type=float, default=10)
     simulate.add_argument("--sample-hz", type=int, default=50)
     simulate.set_defaults(handler=command_collision_scan)

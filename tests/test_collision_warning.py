@@ -42,3 +42,9 @@ def test_scan_returns_warning_only_report(tmp_path):
     assert report["hardware_authorized"] is False
     assert report["mode"] == "collision_proxies"
     assert len(report["samples"]) == 11
+
+
+def test_default_warning_threshold_is_30_mm():
+    from inspect import signature
+    default = signature(scan_action_file).parameters["warning_distance_m"].default
+    assert default == 0.03

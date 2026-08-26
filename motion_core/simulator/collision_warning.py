@@ -80,7 +80,7 @@ def scan_action_file(
     model_path: Path,
     action_path: Path,
     *,
-    warning_distance_m: float = 0.05,
+    warning_distance_m: float = 0.03,
     danger_distance_m: float = 0.01,
     sample_hz: int = 50,
 ) -> dict:
