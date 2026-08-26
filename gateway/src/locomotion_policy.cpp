@@ -27,4 +27,8 @@ bool TurnReached(double yaw_error_radians, double tolerance_degrees) {
   return std::abs(NormalizeAngle(yaw_error_radians)) <= tolerance_degrees * kPi / 180.0;
 }
 
+bool R1LocoResultAccepted(int result) {
+  return result == 0 || result == 127;
+}
+
 }  // namespace r1::motion

@@ -4,14 +4,25 @@
   "actions": [
     {
       "name": "wrist_wave",
-      "version": "1.0.0",
+      "version": "1.3.0",
       "title": "右手腕挥动",
       "kind": "upper_body",
-      "lifecycle": "hardware_full_template_passed",
+      "lifecycle": "draft",
       "classroom_enabled": false,
-      "template": [{"time_s": 2.0, "offsets": {"right_wrist_roll": 0.35}, "hold_s": 1.0}],
+      "template": [{"time_s": 3.5, "offsets": {"right_wrist_roll": 1.7}, "hold_s": 1.0}],
       "parameters": {},
-      "hardware_evidence": "2026-08-25 +0.35 rad return-and-release test accepted; not auto-published"
+      "hardware_evidence": "2026-08-25 +0.35 rad passed; +1.70 rad is the requested maximum-visible template below the wrist joint-limit margin and has no new physical validation"
+    },
+    {
+      "name": "right_shoulder_pitch",
+      "version": "1.2.0",
+      "title": "大幅右肩俯仰",
+      "kind": "upper_body",
+      "lifecycle": "draft",
+      "classroom_enabled": false,
+      "template": [{"time_s": 6.0, "offsets": {"right_shoulder_pitch": -2.0}, "hold_s": 1.0}],
+      "parameters": {},
+      "hardware_evidence": "2026-08-25 -0.20 rad passed; -2.00 rad is the operator-requested doubled template and has no new physical validation"
     },
     {
       "name": "wave_left",
@@ -139,8 +150,8 @@
     {"name":"lesson_start","version":"0.1.0","title":"开始上课","kind":"composition","lifecycle":"draft","classroom_enabled":false,"steps":["say:lesson_start","welcome","ready_pose"],"parameters":{}},
     {"name":"lesson_end","version":"0.1.0","title":"结束课程","kind":"composition","lifecycle":"draft","classroom_enabled":false,"steps":["say:lesson_end","wave_right","ready_pose"],"parameters":{}},
     {"name":"capability_demo","version":"0.1.0","title":"能力展示","kind":"composition","lifecycle":"draft","classroom_enabled":false,"steps":["look","wrist_wave","open_arms"],"parameters":{}},
-    {"name":"move_forward_slow","version":"0.1.0","title":"缓慢向前移动","kind":"locomotion_macro","lifecycle":"draft","classroom_enabled":false,"plan_template":[{"type":"move_for","vx_mps":0.08,"vy_mps":0.0,"duration_s":0.75}],"parameters":{}},
-    {"name":"move_backward_slow","version":"0.1.0","title":"缓慢向后移动","kind":"locomotion_macro","lifecycle":"draft","classroom_enabled":false,"plan_template":[{"type":"move_for","vx_mps":-0.06,"vy_mps":0.0,"duration_s":0.65}],"parameters":{}},
+    {"name":"move_forward_slow","version":"0.1.0","title":"向前移动","kind":"locomotion_macro","lifecycle":"draft","classroom_enabled":false,"plan_template":[{"type":"move_for","vx_mps":0.5,"vy_mps":0.0,"duration_s":1.0}],"parameters":{}},
+    {"name":"move_backward_slow","version":"0.2.0","title":"向后退一步","kind":"locomotion_macro","lifecycle":"draft","classroom_enabled":false,"plan_template":[{"type":"move_for","vx_mps":-0.3,"vy_mps":0.0,"duration_s":1.0}],"parameters":{},"hardware_evidence":"Fixed R1 SetVelocity profile prepared for the next supervised physical direction test"},
     {"name":"move_left_slow","version":"0.1.0","title":"缓慢向左横移","kind":"locomotion_macro","lifecycle":"draft","classroom_enabled":false,"plan_template":[{"type":"move_for","vx_mps":0.0,"vy_mps":0.05,"duration_s":0.6}],"parameters":{}},
     {"name":"move_right_slow","version":"0.1.0","title":"缓慢向右横移","kind":"locomotion_macro","lifecycle":"draft","classroom_enabled":false,"plan_template":[{"type":"move_for","vx_mps":0.0,"vy_mps":-0.05,"duration_s":0.6}],"parameters":{}},
     {"name":"turn_left_10","version":"0.1.0","title":"向左转十度","kind":"locomotion_macro","lifecycle":"draft","classroom_enabled":false,"plan_template":[{"type":"turn_relative","angle_deg":10.0}],"parameters":{}},

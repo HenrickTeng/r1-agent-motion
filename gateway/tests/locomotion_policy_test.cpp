@@ -13,3 +13,9 @@ TEST(LocomotionPolicy, ClampsAndSlowsTurnRate) {
   EXPECT_TRUE(r1::motion::TurnReached(0.01));
   EXPECT_FALSE(r1::motion::TurnReached(0.1));
 }
+
+TEST(LocomotionPolicy, AcceptsObservedR1FirmwareResult) {
+  EXPECT_TRUE(r1::motion::R1LocoResultAccepted(0));
+  EXPECT_TRUE(r1::motion::R1LocoResultAccepted(127));
+  EXPECT_FALSE(r1::motion::R1LocoResultAccepted(3203));
+}

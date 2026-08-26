@@ -122,7 +122,7 @@ scripts/r1_demo.py
 | Gateway gRPC/mTLS | 已编译 | 核心已测 | 未部署 PC1 | 否 | 动作包安装 RPC 仍是拒绝骨架 |
 | Gateway 上肢执行 | 未接通 | 不适用 | 固定独立程序已通 | 否 | `ExecuteInstalledAction()` 当前直接 `return false` |
 | 固定上肢动作器 | 已实现 | 可编译 | 代表动作已通 | 开发 demo | 直接 `rt/lowstate → rt/arm_sdk → 回位` |
-| R1 LocoClient 适配器 | 按官方 API 实现 | 已编译 | 写 API 被固件拒绝 | 否 | `SetVelocity/StopMove` 实测返回 `127` |
+| R1 LocoClient 适配器 | 按官方 API 实现 | 已编译 | `0.5 m/s × 1 s` 已真机前进 | 是 | 动作执行后仍可返回 `127`，已兼容 |
 | 最小 Agent demo | 已实现 | 已通过 | 上肢后端已用 | 开发 demo | 规则解析，还不是 DeepSeek 完整真机演示 |
 | 公网平台 SDK | 已交付骨架 | 基本测试 | 不适用 | 可用于对接 | 项目不包含公网页面/账号系统 |
 
@@ -457,7 +457,10 @@ StopMove()          -> 127
 Start()/SetFsmId(811) -> 1001
 ```
 
-`127` 未在已检查的 SDK2 R1 错误头文件中定义。不要臆测它的精确意义，不要反复盲目发 `SetVelocity`，也不要因为机器人已在 FSM 811 就自动再调 `Start()`。
+`127` 未在已检查的 SDK2 R1 错误头文件中定义。2026-08-26 现场已确认：
+官方原样例程和项目直连程序在返回 `127` 时都实际执行了 `0.5 m/s × 1 s`
+前进。因此不再把 `127` 当作移动失败，但也不臆测它的精确语义；仍不自动调用
+`Start()`。
 
 可以做的下一步只读诊断是查询服务列表，但在获得 R1 官方固件说明前，不要使用 Go2/G1 的 `RobotStateClient::ServiceSwitch()` 猜测性开关 `sport_mode` / `ai_sport`。
 
@@ -532,7 +535,7 @@ ChannelSubscriber<unitree_hg::msg::dds_::LowState_>
 2. 确认当前 PC1 firmware、`ai_sport`、`vui_service` 和 module 版本，回填 `third_party_manifest.json`。
 3. 必要时添加纯只读 service-list 工具，先观测服务名、status 和 protect。
 4. 仅在 R1 官方文档明确要求时才调用 service switch。
-5. 修复后只先测 `0.05 m/s × 0.5 s` 前进，紧接 `StopMove`。
+5. 已验证 `0.5 m/s × 1 s` 前进；调用端需等待持续时间完成后再 `StopMove`，不得紧接取消。
 6. 再测“能走、能停、能转”，不先做距离精度。
 
 禁止方向：

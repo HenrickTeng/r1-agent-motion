@@ -51,9 +51,13 @@ build/gateway-unitree/r1-unitree-status enp7s0
 - `GetFsmId()` 成功，返回 `811`。
 - `rt/lowstate` 正常输出。
 - `GetFsmMode()` 在当前固件上失败。
-- 官方 R1 `SetVelocity()` 和 `StopMove()` 均返回 `127`，机器人未产生显著位移。
-- `127` 未在当前 SDK2 R1 错误头文件中定义，不能在项目中臆测为某个具体故障。
+- 遥控器进入走跑运控高速档后，官方原样例程和项目直连程序都已用
+  `SetVelocity(0.5, 0, 0, 1)` 成功前进。
+- `SetVelocity()` 和 `StopMove()` 在动作已执行时仍可能返回 `127`。`127` 未在当前
+  SDK2 R1 错误头文件中定义，适配器仅对 R1 移动/转向/停车调用将 `0` 和
+  已真机验证的 `127` 都视为可接受结果，其他返回码仍按失败处理。
 
-因此代码已接入官方 R1 API，但当前机器人固件/服务尚未完成行走写接口验收。在 Unitree 确认当前 R1 固件的服务开启条件前，不使用 Go2/G1 的 `RobotStateClient::ServiceSwitch` 猜测性切换服务，也不降级到低层腿部控制。
+因此当前使用方式是：保持 FSM 811 和走跑运控高速档，直接调用 R1 官方
+`LocoClient`。不使用 Go2/G1 的 `RobotStateClient::ServiceSwitch`，也不降级到低层腿部控制。
 
 当主机安装 gRPC/Protobuf C++ 开发包时，同一构建会产生链接真机适配器的 `r1-gateway-grpc`。未确认现场检查表时不得执行运动测试。

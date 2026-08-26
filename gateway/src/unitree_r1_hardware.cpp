@@ -1,4 +1,5 @@
 #include "unitree_r1_hardware.hpp"
+#include "locomotion_policy.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -12,11 +13,6 @@ namespace r1::motion {
 namespace {
 constexpr int kReadyFsm = 811;
 constexpr double kPi = 3.14159265358979323846;
-double Wrap(double value) {
-  while (value > kPi) value -= 2.0 * kPi;
-  while (value < -kPi) value += 2.0 * kPi;
-  return value;
-}
 }  // namespace
 
 UnitreeR1Hardware::UnitreeR1Hardware(std::string network_interface)
@@ -75,7 +71,7 @@ bool UnitreeR1Hardware::MoveFor(double vx, double vy, double duration,
   std::cerr << "R1 LocoClient::SetVelocity vx=" << vx << " vy=" << vy
             << " duration=" << duration
             << " result=" << move_result << '\n';
-  if (move_result != 0) {
+  if (!R1LocoResultAccepted(move_result)) {
     StopAndRelease();
     return false;
   }
@@ -90,7 +86,7 @@ bool UnitreeR1Hardware::MoveFor(double vx, double vy, double duration,
   }
   const int stop_result = loco_->StopMove();
   std::cerr << "R1 LocoClient::StopMove result=" << stop_result << '\n';
-  return stop_result == 0;
+  return R1LocoResultAccepted(stop_result);
 }
 
 double UnitreeR1Hardware::Yaw() const {
@@ -98,31 +94,46 @@ double UnitreeR1Hardware::Yaw() const {
   return static_cast<double>(lowstate_message_.imu_state().rpy()[2]);
 }
 
-bool UnitreeR1Hardware::TurnRelative(double angle_deg, double maximum_rate_rad_s,
-                                     std::atomic_bool& cancelled) {
-  if (!Ready()) return false;
-  const double target = Wrap(Yaw() + angle_deg * kPi / 180.0);
-  const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(20);
+bool UnitreeR1Hardware::TurnFor(double omega_rad_s, double duration,
+                                std::atomic_bool& cancelled) {
+  if (!Ready() || omega_rad_s == 0.0 || duration <= 0.0) return false;
+  const double initial_yaw = Yaw();
+  const int turn_result = loco_->SetVelocity(0.0f, 0.0f, static_cast<float>(omega_rad_s),
+                                              static_cast<float>(duration));
+  std::cerr << "R1 LocoClient::SetVelocity omega=" << omega_rad_s
+            << " duration=" << duration
+            << " result=" << turn_result << '\n';
+  if (!R1LocoResultAccepted(turn_result)) {
+    StopAndRelease();
+    return false;
+  }
+  const auto deadline = std::chrono::steady_clock::now() +
+                        std::chrono::duration<double>(duration);
   while (std::chrono::steady_clock::now() < deadline) {
     if (cancelled.load() || !Ready()) {
       StopAndRelease();
       return false;
     }
-    const double error = Wrap(target - Yaw());
-    if (std::abs(error) <= 1.5 * kPi / 180.0) {
-      const int stop_result = loco_->StopMove();
-      std::cerr << "R1 LocoClient::StopMove result=" << stop_result << '\n';
-      return stop_result == 0;
-    }
-    const double rate = std::clamp(error * 1.5, -maximum_rate_rad_s, maximum_rate_rad_s);
-    if (loco_->Move(0.0f, 0.0f, static_cast<float>(rate)) != 0) {
-      StopAndRelease();
-      return false;
-    }
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
   }
-  StopAndRelease();
-  return false;
+  const int stop_result = loco_->StopMove();
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));
+  const double yaw_delta = NormalizeAngle(Yaw() - initial_yaw);
+  const double yaw_delta_deg = yaw_delta * 180.0 / kPi;
+  std::cerr << "R1 LocoClient::StopMove result=" << stop_result
+            << " imu_yaw_delta_deg=" << yaw_delta_deg << '\n';
+  return R1LocoResultAccepted(stop_result) && std::abs(yaw_delta_deg) >= 3.0;
+}
+
+bool UnitreeR1Hardware::TurnRelative(double angle_deg, double maximum_rate_rad_s,
+                                     std::atomic_bool& cancelled) {
+  if (!Ready()) return false;
+  if (angle_deg == 0.0) return true;
+  if (maximum_rate_rad_s <= 0.0) return false;
+
+  const double rate = std::copysign(maximum_rate_rad_s, angle_deg);
+  const double duration = std::abs(angle_deg) * kPi / 180.0 / maximum_rate_rad_s;
+  return TurnFor(rate, duration, cancelled);
 }
 
 void UnitreeR1Hardware::StopAndRelease() noexcept {

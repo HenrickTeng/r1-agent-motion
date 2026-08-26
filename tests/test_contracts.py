@@ -8,7 +8,7 @@ from motion_core.library import expand_locomotion_macros, load_action_library
 def test_plan_accepts_only_public_step_union():
     plan = MotionPlan.model_validate({
         "schema_version": "motion-plan/v2", "plan_id": "safe-001", "require_operator_enable": True,
-        "steps": [{"type": "move_for", "vx_mps": 0.15, "vy_mps": -0.1, "duration_s": 2}],
+        "steps": [{"type": "move_for", "vx_mps": 0.5, "vy_mps": -0.1, "duration_s": 2}],
     })
     assert plan.steps[0].type == "move_for"
 
@@ -16,7 +16,8 @@ def test_plan_accepts_only_public_step_union():
 @pytest.mark.parametrize("step", [
     {"type": "shell", "command": "echo unsafe"},
     {"type": "action", "action": "wave", "parameters": {}, "dds_topic": "rt/lowcmd"},
-    {"type": "move_for", "vx_mps": 0.151, "vy_mps": 0, "duration_s": 1},
+    {"type": "move_for", "vx_mps": 0.501, "vy_mps": 0, "duration_s": 1},
+    {"type": "move_for", "vx_mps": -0.301, "vy_mps": 0, "duration_s": 1},
     {"type": "turn_relative", "angle_deg": 31},
 ])
 def test_plan_rejects_unknown_and_unsafe_fields(step):
@@ -37,3 +38,7 @@ def test_locomotion_macros_are_fixed_and_within_plan_limits():
     plan = MotionPlan.model_validate({"schema_version":"motion-plan/v2","plan_id":"macro-test","require_operator_enable":True,"steps":[{"type":"action","action":"turn_left_10","parameters":{}}]})
     expanded = expand_locomotion_macros(plan, {action["name"]: action for action in macros})
     assert expanded.steps[0].type == "turn_relative" and expanded.steps[0].angle_deg == 10
+    forward = next(action for action in macros if action["name"] == "move_forward_slow")
+    assert forward["plan_template"] == [
+        {"type": "move_for", "vx_mps": 0.5, "vy_mps": 0.0, "duration_s": 1.0}
+    ]

@@ -15,6 +15,7 @@ namespace {
 constexpr std::size_t kRightShoulderPitch = 5;
 constexpr float kMinimumJointLimit = -3.1416f;
 constexpr float kMaximumJointLimit = 2.0944f;
+constexpr float kJointLimitMargin = 0.20f;
 constexpr std::array<float, 13> kKp = {50, 50, 40, 40, 30, 50, 50, 40, 40, 30, 50, 15, 15};
 constexpr std::array<float, 13> kKd = {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 1, 1};
 
@@ -107,22 +108,28 @@ class ShoulderTrial {
     const auto initial = CurrentPose();
     auto target = initial;
     target[kRightShoulderPitch] += offset_radians;
-    if (target[kRightShoulderPitch] <= kMinimumJointLimit ||
-        target[kRightShoulderPitch] >= kMaximumJointLimit) {
-      std::cerr << "trial rejected: target exceeds official joint limit" << std::endl;
+    if (target[kRightShoulderPitch] <= kMinimumJointLimit + kJointLimitMargin ||
+        target[kRightShoulderPitch] >= kMaximumJointLimit - kJointLimitMargin) {
+      std::cerr << "trial rejected: target exceeds shoulder joint limit margin" << std::endl;
       return false;
     }
     try {
       CheckSafety();
       Enable(initial);
       std::this_thread::sleep_for(std::chrono::milliseconds(500));
-      Move(initial, target, 2);
-      std::this_thread::sleep_for(std::chrono::milliseconds(700));
-      Move(target, initial, 2);
+      Move(initial, target, 6.0f);
+      std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+      const float reached = CurrentPose()[kRightShoulderPitch];
+      const float achieved_offset = reached - initial[kRightShoulderPitch];
+      const float target_error = std::abs(reached - target[kRightShoulderPitch]);
+      std::cout << "target_offset_rad=" << offset_radians
+                << " achieved_offset_rad=" << achieved_offset
+                << " target_error_rad=" << target_error << std::endl;
+      Move(target, initial, 6.0f);
       Release();
       const float return_error = std::abs(CurrentPose()[kRightShoulderPitch] - initial[kRightShoulderPitch]);
       std::cout << "return_error_rad=" << return_error << std::endl;
-      return return_error <= 0.05f;
+      return target_error <= 0.12f && return_error <= 0.05f;
     } catch (const std::exception& error) {
       std::cerr << "trial aborted: " << error.what() << std::endl;
       Release();
@@ -142,7 +149,7 @@ int main(int argc, char const* argv[]) {
     return 1;
   }
   const std::string scale = argc == 3 ? argv[2] : "small";
-  const float offset_radians = scale == "small" ? -0.07f : scale == "full" ? -0.20f : 1.0f;
+  const float offset_radians = scale == "small" ? -0.20f : scale == "full" ? -2.00f : 1.0f;
   if (offset_radians > 0) {
     std::cerr << "scale must be small or full" << std::endl;
     return 1;

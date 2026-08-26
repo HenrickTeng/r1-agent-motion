@@ -5,7 +5,8 @@
 
 namespace r1::motion {
 namespace {
-constexpr double kMaxVx = 0.15;
+constexpr double kMaxForwardVx = 0.5;
+constexpr double kMaxBackwardVx = 0.30;
 constexpr double kMaxVy = 0.10;
 constexpr double kMaxMoveDuration = 2.0;
 constexpr double kMaxTurnDegrees = 30.0;
@@ -40,7 +41,8 @@ ValidationResult GatewayCore::Validate(const MotionPlan& plan) const {
       if (!installed_actions_.count(action->action))
         result.errors.emplace_back("action is not installed: " + action->action);
     } else if (const auto* move = std::get_if<MoveForStep>(&step)) {
-      if (std::abs(move->vx_mps) > kMaxVx || std::abs(move->vy_mps) > kMaxVy ||
+      if (move->vx_mps > kMaxForwardVx || move->vx_mps < -kMaxBackwardVx ||
+          std::abs(move->vy_mps) > kMaxVy ||
           move->duration_s <= 0 || move->duration_s > kMaxMoveDuration)
         result.errors.emplace_back("move_for exceeds bounded locomotion limits");
     } else if (const auto* turn = std::get_if<TurnRelativeStep>(&step)) {

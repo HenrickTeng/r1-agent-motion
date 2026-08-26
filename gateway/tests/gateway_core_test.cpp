@@ -32,7 +32,14 @@ TEST(GatewayCore, RejectsUnknownActions) {
 TEST(GatewayCore, RejectsUnsafeMovement) {
   FakeHardware hardware;
   r1::motion::GatewayCore gateway(hardware);
-  r1::motion::MotionPlan plan{"motion-plan/v2", "test-002", {r1::motion::MoveForStep{0.3, 0, 1}}, true};
+  r1::motion::MotionPlan plan{"motion-plan/v2", "test-002", {r1::motion::MoveForStep{0.51, 0, 1}}, true};
+  EXPECT_FALSE(gateway.Validate(plan).valid);
+}
+
+TEST(GatewayCore, RejectsUnverifiedFastBackwardMovement) {
+  FakeHardware hardware;
+  r1::motion::GatewayCore gateway(hardware);
+  r1::motion::MotionPlan plan{"motion-plan/v2", "test-004", {r1::motion::MoveForStep{-0.31, 0, 1}}, true};
   EXPECT_FALSE(gateway.Validate(plan).valid);
 }
 

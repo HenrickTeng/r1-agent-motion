@@ -153,7 +153,7 @@ class ActionStep(StrictModel):
 
 class MoveForStep(StrictModel):
     type: Literal["move_for"]
-    vx_mps: float = Field(ge=-0.15, le=0.15)
+    vx_mps: float = Field(ge=-0.3, le=0.5)
     vy_mps: float = Field(ge=-0.10, le=0.10)
     duration_s: float = Field(gt=0, le=2)
 

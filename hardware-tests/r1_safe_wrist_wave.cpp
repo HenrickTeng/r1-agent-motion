@@ -13,6 +13,9 @@
 
 namespace {
 constexpr std::size_t kRightWristRoll = 9;
+constexpr float kMinimumJointLimit = -1.9199f;
+constexpr float kMaximumJointLimit = 1.9199f;
+constexpr float kJointLimitMargin = 0.15f;
 constexpr std::array<float, 13> kKp = {50, 50, 40, 40, 30, 50, 50, 40, 40, 30, 50, 15, 15};
 constexpr std::array<float, 13> kKd = {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 1, 1};
 
@@ -99,16 +102,27 @@ class WristTrial {
     const auto initial = CurrentPose();
     auto target = initial;
     target[kRightWristRoll] += offset;
+    if (target[kRightWristRoll] <= kMinimumJointLimit + kJointLimitMargin ||
+        target[kRightWristRoll] >= kMaximumJointLimit - kJointLimitMargin) {
+      std::cerr << "trial rejected: target exceeds wrist joint limit margin" << std::endl;
+      return false;
+    }
     try {
       Enable(initial);
       std::this_thread::sleep_for(std::chrono::milliseconds(500));
-      Move(initial, target, 2);
-      std::this_thread::sleep_for(std::chrono::milliseconds(700));
-      Move(target, initial, 2);
+      Move(initial, target, 3.5f);
+      std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+      const float reached = CurrentPose()[kRightWristRoll];
+      const float achieved_offset = reached - initial[kRightWristRoll];
+      const float target_error = std::abs(reached - target[kRightWristRoll]);
+      std::cout << "target_offset_rad=" << offset
+                << " achieved_offset_rad=" << achieved_offset
+                << " target_error_rad=" << target_error << std::endl;
+      Move(target, initial, 3.5f);
       Release();
       const float return_error = std::abs(CurrentPose()[kRightWristRoll] - initial[kRightWristRoll]);
       std::cout << "return_error_rad=" << return_error << std::endl;
-      return return_error <= 0.05f;
+      return target_error <= 0.12f && return_error <= 0.05f;
     } catch (const std::exception& error) {
       std::cerr << "trial aborted: " << error.what() << std::endl;
       Release();
@@ -128,13 +142,15 @@ int main(int argc, char const* argv[]) {
     return 1;
   }
   const std::string scale = argc == 3 ? argv[2] : "small";
-  const float offset = scale == "small" ? 0.12f : scale == "full" ? 0.35f : -1;
+  const float offset = scale == "small" ? 0.20f : scale == "full" ? 1.70f : -1;
   if (offset < 0) {
     std::cerr << "scale must be small or full" << std::endl;
     return 1;
   }
   std::cout << "Confirm: environment clear, emergency stop in hand, robot stable, "
-               "and this right-wrist trial is authorized. Type START: ";
+               "and this right-wrist " << offset << " rad ("
+            << offset * 180.0f / 3.14159265f
+            << " deg) trial is authorized. Type START: ";
   std::string confirmation;
   std::cin >> confirmation;
   if (confirmation != "START") {

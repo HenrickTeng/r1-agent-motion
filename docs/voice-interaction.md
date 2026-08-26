@@ -24,6 +24,63 @@ ASR/TTS 分项通过后，做一轮语音对话：
   --bridge-url http://127.0.0.1:8765 --interface enp7s0
 ```
 
+## DIY 直连模式（电脑麦克风）
+
+课堂单机演示不需要启动 Teacher Bridge 和 gRPC Gateway。先在 R1 APP 中关闭原厂
+语音助手，确保不使用 `L2+Select`。安装本地 ASR 并下载 Vosk 中文模型后，
+当机器人已在 FSM 811、遥控器已切到走跑运控高速档时，可运行：
+
+```bash
+./scripts/r1_voice_agent.py --pc-mic-continuous --provider rule --diy-direct \
+  --execute --session-id classroom-demo --interface enp7s0
+```
+
+默认使用 PipeWire/PulseAudio 的当前系统麦克风（`--pc-mic-device pulse`）。
+
+每轮会用电脑麦克风录音 4 秒，可说“向前走一步”、“向后退一步”、“向左转”、
+“向右转”、“挥右手”、“请移动右手腕关节”或“请移动右肩关节”。左右横移尚未开放。
+该模式只暴露程序内置的已验收固定动作，不接受原始速度、任意关节、Shell 或 DeepSeek
+生成动作。Agent 播报完回复后才执行动作，动作完成后重新监听，避免自回声。
+
+R1 机载 `--listen-once/--continuous` 仅保留为只读 ASR 调试。当 `--diy-direct --execute`
+启用时，程序会拒绝机载 ASR 参数，避免原厂助手和 DIY Agent 同时执行。
+
+当前 DIY 四向语音使用固定的官方 RPC 参数：
+
+```text
+SetVelocity(vx=0.5, vy=0, omega=0, duration=1)
+SetVelocity(vx=-0.3, vy=0, omega=0, duration=1)
+SetVelocity(vx=0, vy=0, omega=0.5, duration=2)
+SetVelocity(vx=0, vy=0, omega=-0.5, duration=2)
+```
+
+动作完成后固定调用 `StopMove()`，不开放学生输入原始速度。前进已完成真机验证；
+后退与新版转向参数等待机器人回场后逐项确认。转向程序会比较动作前后的 IMU yaw，
+偏航变化不足 3°时返回失败，不会仅凭 RPC 返回 `127` 报告成功。
+
+8 月 25 日已验收的右腕、右肩监督动作也支持电脑麦克风。原始验收幅度分别为
+`+0.35 rad` 和 `-0.20 rad`。最终课堂可见档按操作员要求调整为右腕 `+1.70 rad`
+（约 97.4°）和右肩 `-2.00 rad`（约 114.6°）。右腕不能精确 double 到 `2.40 rad`，
+因为会超过官方 `±1.9199 rad` 关节限位，因此使用保留 `0.15 rad` 余量后的固定档。
+右腕、右肩往返时间分别延长到 3.5 秒和 6 秒，继续保留实际到达幅度、回位、温度、
+IMU 和关节限位余量检查。这两个最终幅度没有进行新的真机验收，动作库保持 `draft`。
+
+```bash
+./scripts/r1_voice_agent.py --pc-mic-once --provider rule \
+  --supervised-trial wrist-full \
+  --trial-confirmation "ENABLE SUPERVISED HARDWARE TRIAL" \
+  --execute --session-id classroom-wrist-test --interface enp7s0
+
+./scripts/r1_voice_agent.py --pc-mic-once --provider rule \
+  --supervised-trial shoulder-full \
+  --trial-confirmation "ENABLE SUPERVISED HARDWARE TRIAL" \
+  --execute --session-id classroom-shoulder-test --interface enp7s0
+```
+
+分别说“请移动右手腕关节”和“请移动右肩关节”。每个进程只允许执行一次，动作程序
+继续负责回位、温度/IMU 检查和 ArmSdk 控制权释放。机器人充电或无人看护时只使用
+`--dry-run`，不要使用 `--execute`。
+
 连续模式在 TTS 返回后才重新启动 ASR 监听，因此不会边说边听造成自回声：
 
 ```bash

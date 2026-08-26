@@ -49,22 +49,85 @@ class DeepSeekAdapter:
 
 
 class LocalSafetyAdapter:
-    forbidden = re.compile(r"跳舞|跳跃|跳起来|鞠躬|下蹲|蹲下|跑步|全身")
+    forbidden_replies = (
+        (re.compile(r"跳舞|跳跃|跳起来"), "跳舞和跳跃动作容易失去平衡，我不会执行。我可以挥手或张开双臂。"),
+        (re.compile(r"趴下|躺下|躺倒|趴地|坐下|下蹲|蹲下|鞠躬"), "趴下、躺下和下蹲不在当前安全动作库中，我不会执行。"),
+        (re.compile(r"跑步|奔跑|翻滚|后空翻|空翻|踢腿"), "跑步、翻滚和踢腿属于未验收的高风险动作，我不会执行。"),
+        (re.compile(r"横移"), "左右横移还没有完成真机验收，当前不会执行。"),
+        (re.compile(r"全身|新动作|随便做"), "我只能执行老师已验收的固定动作，不会临时生成全身动作。"),
+    )
+    aliases = (
+        ("向前走一步", "move_forward_slow"),
+        ("往前走一步", "move_forward_slow"),
+        ("前进一步", "move_forward_slow"),
+        ("向前走", "move_forward_slow"),
+        ("往前走", "move_forward_slow"),
+        ("前进", "move_forward_slow"),
+        ("向后走一步", "move_backward_slow"),
+        ("往后走一步", "move_backward_slow"),
+        ("向后走", "move_backward_slow"),
+        ("往后走", "move_backward_slow"),
+        ("后退", "move_backward_slow"),
+        ("往左边转", "turn_left_rpc"),
+        ("朝左边转", "turn_left_rpc"),
+        ("转向左边", "turn_left_rpc"),
+        ("向左转", "turn_left_rpc"),
+        ("往左转", "turn_left_rpc"),
+        ("左转", "turn_left_rpc"),
+        ("往右边转", "turn_right_rpc"),
+        ("朝右边转", "turn_right_rpc"),
+        ("转向右边", "turn_right_rpc"),
+        ("向右转", "turn_right_rpc"),
+        ("往右转", "turn_right_rpc"),
+        ("右转", "turn_right_rpc"),
+        ("挥右手", "wave_right"),
+        ("右手挥手", "wave_right"),
+        ("挥左手", "wave_left"),
+        ("左手挥手", "wave_left"),
+        ("左手平举", "raise_hand_left"),
+        ("平举左手", "raise_hand_left"),
+        ("举起左手", "raise_hand_left"),
+        ("抬起左手", "raise_hand_left"),
+        ("左手举起来", "raise_hand_left"),
+        ("举左手", "raise_hand_left"),
+        ("左手举手", "raise_hand_left"),
+        ("右手平举", "raise_hand_right"),
+        ("平举右手", "raise_hand_right"),
+        ("举起右手", "raise_hand_right"),
+        ("抬起右手", "raise_hand_right"),
+        ("右手举起来", "raise_hand_right"),
+        ("举右手", "raise_hand_right"),
+        ("右手举手", "raise_hand_right"),
+        ("张开双臂", "open_arms"),
+        ("展开双臂", "open_arms"),
+        ("挥挥手", "wave_right"),
+        ("双手向前", "hands_forward"),
+        ("右手腕", "wrist_wave"),
+        ("右肩", "right_shoulder_pitch_trial"),
+        ("右肩", "right_shoulder_pitch"),
+    )
 
     def complete(self, text: str, *, mode: str, enabled_actions: list[dict], repair: str | None = None) -> dict:
         del repair
         compact = re.sub(r"\s+", "", text)
-        if self.forbidden.search(compact):
-            return {"reply": "这个动作超出当前课堂安全范围，我不会让机器人运动。可以选择老师已验收的上肢手势。", "intent": "conversation", "plan": None, "design": None}
+        forbidden_reply = next(
+            (reply for pattern, reply in self.forbidden_replies if pattern.search(compact)),
+            None,
+        )
+        if forbidden_reply:
+            return {"reply": forbidden_reply, "intent": "conversation", "plan": None, "design": None}
         if "停止" in compact or "取消" in compact:
             return {"reply": "我会请求停止当前任务。", "intent": "conversation", "plan": None, "design": None}
         if "你好" in compact or "您好" in compact or "介绍" in compact:
             return {"reply": "你好，我是R1课堂助手，很高兴和你一起学习具身智能。", "intent": "conversation", "plan": None, "design": None}
-        matching = next((action for action in enabled_actions if action["name"] in compact or action.get("title", "") in compact), None)
+        aliases = [name for phrase, name in self.aliases if phrase in compact]
+        matching = next((action for action in enabled_actions if action["name"] in aliases), None)
+        if matching is None:
+            matching = next((action for action in enabled_actions if action["name"] in compact or action.get("title", "") in compact), None)
         if mode == "execute" and matching:
             return {
                 "reply": f"好的，我会先校验{matching.get('title', matching['name'])}动作。", "intent": "execute_motion",
                 "plan": {"schema_version": "motion-plan/v2", "plan_id": "local-safe-plan", "steps": [{"type": "action", "action": matching["name"], "parameters": {}}], "require_operator_enable": True},
                 "design": None,
             }
-        return {"reply": "我听到了。当前离线模式可以对话、停止任务，并选择老师已经验收的动作。", "intent": "conversation", "plan": None, "design": None}
+        return {"reply": "我没有听懂可执行的动作。请明确说向前走一步、向左转、向右转、举左手、举右手或挥手。", "intent": "conversation", "plan": None, "design": None}

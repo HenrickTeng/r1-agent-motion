@@ -105,7 +105,7 @@ class Service final : public proto::R1Gateway::Service {
     response->set_gateway_version("0.1.0");
     for (const auto* type : {"say", "action", "move_for", "turn_relative", "wait"})
       response->add_plan_step_types(type);
-    response->set_max_vx_mps(0.15);
+    response->set_max_vx_mps(0.5);
     response->set_max_vy_mps(0.10);
     response->set_max_move_duration_s(2);
     response->set_max_turn_angle_deg(30);

@@ -20,6 +20,9 @@ void HandleAsrMessage(const void* raw_message) {
   const auto* message = static_cast<const std_msgs::msg::dds_::String_*>(raw_message);
   const std::string data = message->data();
   std::cout << data << std::endl;
+  if (data.find("\"text\"") == std::string::npos) {
+    return;
+  }
   const bool is_final = data.find("\"is_final\":true") != std::string::npos ||
                         data.find("\"is_final\":1") != std::string::npos;
   const bool has_speech = data.find("\"text\":\"。\"") == std::string::npos &&

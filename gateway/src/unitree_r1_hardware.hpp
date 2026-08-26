@@ -20,6 +20,7 @@ class UnitreeR1Hardware final : public RobotHardware {
   bool ExecuteInstalledAction(const std::string&, std::atomic_bool&) override;
   bool MoveFor(double, double, double, std::atomic_bool&) override;
   bool TurnRelative(double, double, std::atomic_bool&) override;
+  bool TurnFor(double omega_rad_s, double duration, std::atomic_bool& cancelled);
   void StopAndRelease() noexcept override;
 
  private:

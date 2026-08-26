@@ -17,8 +17,8 @@ class DemoAction:
 
 DEMO_ACTIONS: dict[str, DemoAction] = {
     "self_intro": DemoAction("self_intro", "自我介绍", "speech", {"text": "你好，我是 R1 课堂助手，很高兴和你一起学习具身智能。"}),
-    "wrist_wave": DemoAction("wrist_wave", "右手腕挥动", "arm", {}),
-    "right_shoulder_pitch": DemoAction("right_shoulder_pitch", "右肩俯仰", "arm", {}),
+    "wrist_wave": DemoAction("wrist_wave", "大幅右手腕挥动", "arm", {}),
+    "right_shoulder_pitch": DemoAction("right_shoulder_pitch", "大幅右肩俯仰", "arm", {}),
     "wave_right": DemoAction("wave_right", "右手挥手", "arm", {}),
     "wave_left": DemoAction("wave_left", "左手挥手", "arm", {}),
     "hands_forward": DemoAction("hands_forward", "双手向前展示", "arm", {}),
@@ -38,14 +38,16 @@ DEMO_ACTIONS: dict[str, DemoAction] = {
     "shake_head": DemoAction("shake_head", "轻轻摇头", "head", {}),
     "listen_left": DemoAction("listen_left", "面向左侧聆听", "head", {}),
     "listen_right": DemoAction("listen_right", "面向右侧聆听", "head", {}),
-    "move_forward_slow": DemoAction("move_forward_slow", "缓慢向前移动", "move", {"vx": 0.05, "vy": 0.0, "duration": 0.5}),
-    "move_backward_slow": DemoAction("move_backward_slow", "缓慢向后移动", "move", {"vx": -0.05, "vy": 0.0, "duration": 0.5}),
+    "move_forward_slow": DemoAction("move_forward_slow", "向前走一步", "move", {"vx": 0.5, "vy": 0.0, "duration": 1.0}),
+    "move_backward_slow": DemoAction("move_backward_slow", "向后退一步", "move", {"vx": -0.3, "vy": 0.0, "duration": 1.0}),
     "move_left_slow": DemoAction("move_left_slow", "缓慢向左横移", "move", {"vx": 0.0, "vy": 0.05, "duration": 0.6}),
     "move_right_slow": DemoAction("move_right_slow", "缓慢向右横移", "move", {"vx": 0.0, "vy": -0.05, "duration": 0.6}),
     "turn_left_10": DemoAction("turn_left_10", "向左转十度", "turn", {"angle_deg": 10.0}),
     "turn_right_10": DemoAction("turn_right_10", "向右转十度", "turn", {"angle_deg": -10.0}),
     "turn_left_20": DemoAction("turn_left_20", "向左转二十度", "turn", {"angle_deg": 20.0}),
     "turn_right_20": DemoAction("turn_right_20", "向右转二十度", "turn", {"angle_deg": -20.0}),
+    "turn_left_rpc": DemoAction("turn_left_rpc", "向左转", "turn", {"omega": 0.5, "duration": 2.0}),
+    "turn_right_rpc": DemoAction("turn_right_rpc", "向右转", "turn", {"omega": -0.5, "duration": 2.0}),
 }
 
 SPEECH = {
@@ -99,7 +101,7 @@ class DemoPlanner:
     aliases = (("向前", "move_forward_slow"), ("向后", "move_backward_slow"),
                ("向左横移", "move_left_slow"), ("向右横移", "move_right_slow"),
                ("向左转二十度", "turn_left_20"), ("向右转二十度", "turn_right_20"),
-               ("向左转", "turn_left_10"), ("向右转", "turn_right_10"),
+               ("向左转", "turn_left_rpc"), ("向右转", "turn_right_rpc"),
                ("右手腕", "wrist_wave"), ("挥右手", "wave_right"),
                ("挥左手", "wave_left"), ("双手向前", "hands_forward"),
                ("张开双臂", "open_arms"), ("右手敬礼", "salute_right"),

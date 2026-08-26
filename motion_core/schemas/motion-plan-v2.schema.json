@@ -56,8 +56,8 @@
           "type": "string"
         },
         "vx_mps": {
-          "maximum": 0.15,
-          "minimum": -0.15,
+          "maximum": 0.5,
+          "minimum": -0.3,
           "title": "Vx Mps",
           "type": "number"
         },

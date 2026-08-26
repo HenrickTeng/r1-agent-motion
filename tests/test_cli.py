@@ -17,7 +17,7 @@ def test_cli_lists_pack_without_dance_or_jump():
     assert result.returncode == 0
     names = [action["name"] for action in json.loads(result.stdout)["actions"]]
     assert "wrist_wave" in names and "dance" not in names and "jump" not in names
-    assert len(names) == 36
+    assert len(names) == 37
     assert {"move_forward_slow", "move_left_slow", "turn_left_10"} <= set(names)
 
 
