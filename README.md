@@ -5,19 +5,18 @@
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -e '.[dev]'
+.venv/bin/pip install 'cyclonedds==0.10.2' numpy
+.venv/bin/pip install -e ./unitree_sdk2_python --no-deps
 PYTHONPATH=. .venv/bin/python -m r1_agent --text "请介绍自己，然后挥右手"
 PYTHONPATH=. .venv/bin/pytest
 ```
 
-真机（同一网段，网卡名按实际修改）：
+Mac 上用 USB 网卡 `en5`，地址 `192.168.123.100`，直连 R1 `192.168.123.161`。C++ SDK 只有 Linux 预编译库，真机 demo 走 Python DDS。
 
 ```bash
-export UNITREE_SDK2_DIR=/path/to/unitree_sdk2-main
-cmake -S robot -B build/robot -DUNITREE_SDK2_DIR="$UNITREE_SDK2_DIR"
-cmake --build build/robot -j2
-PYTHONPATH=. .venv/bin/python -m r1_agent --listen --hardware --interface enp7s0
+PYTHONPATH=. .venv/bin/python -m r1_agent --listen --hardware --interface en5
 ```
 
 可选 `DEEPSEEK_API_KEY` 与 `--deepseek`。动作白名单见 `actions.json`，Skill 见 `skill/control-unitree-r1/SKILL.md`。
 
-当前固件上行走写 API 可能返回 `127`；上肢固定动作、ASR、TTS 已在真机用过。现场需要急停在手。
+当前固件上行走写 API 可能返回 `127`；上肢固定动作、ASR、TTS 已在 Linux 真机用过。现场需要急停在手。

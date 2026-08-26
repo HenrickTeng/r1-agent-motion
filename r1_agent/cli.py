@@ -5,7 +5,6 @@ import json
 import sys
 import time
 
-from r1_agent.asr import listen_once
 from r1_agent.executor import Executor, SimulatedBackend
 from r1_agent.hardware import R1Hardware
 from r1_agent.planner import DeepSeekPlanner, RulePlanner
@@ -13,10 +12,6 @@ from r1_agent.planner import DeepSeekPlanner, RulePlanner
 
 def _planner(deepseek: bool):
     return DeepSeekPlanner() if deepseek else RulePlanner()
-
-
-def _backend(hardware: bool, interface: str):
-    return R1Hardware(interface) if hardware else SimulatedBackend()
 
 
 def handle(text: str, *, planner, backend, speak_reply: bool) -> None:
@@ -36,21 +31,25 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--continuous", action="store_true")
     parser.add_argument("--deepseek", action="store_true")
     parser.add_argument("--hardware", action="store_true")
-    parser.add_argument("--interface", default="enp7s0")
+    parser.add_argument("--interface", default="en5")
     parser.add_argument("--listen-timeout", type=int, default=30)
     parser.add_argument("--cooldown", type=float, default=2.5)
     args = parser.parse_args(argv)
     if args.continuous and not args.listen:
         parser.error("--continuous requires --listen")
     planner = _planner(args.deepseek)
-    backend = _backend(args.hardware, args.interface)
+    robot = None
+    if args.hardware or args.listen:
+        from r1_agent.dds_robot import DdsRobot
+        robot = DdsRobot(args.interface)
+    backend = R1Hardware(args.interface, robot=robot) if args.hardware else SimulatedBackend()
     try:
         if args.text is not None:
             handle(" ".join(args.text), planner=planner, backend=backend, speak_reply=args.hardware)
             return 0
         while True:
             handle(
-                listen_once(args.interface, timeout_s=args.listen_timeout),
+                robot.listen(timeout_s=args.listen_timeout),
                 planner=planner,
                 backend=backend,
                 speak_reply=True,

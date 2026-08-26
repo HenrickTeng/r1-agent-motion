@@ -11,9 +11,9 @@ Laptop on the robot Ethernet talks DDS directly. The model only chooses named ac
 
 ```bash
 python -m r1_agent --text "请介绍自己，然后挥右手"
-python -m r1_agent --text "挥右手然后敬礼" --hardware --interface enp7s0
-python -m r1_agent --listen --hardware --interface enp7s0
-python -m r1_agent --listen --continuous --deepseek --hardware --interface enp7s0
+python -m r1_agent --text "挥右手然后敬礼" --hardware --interface en5
+python -m r1_agent --listen --hardware --interface en5
+python -m r1_agent --listen --continuous --deepseek --hardware --interface en5
 ```
 
 `--listen` uses R1 ASR (`rt/audio_msg`). `--hardware` runs TTS, fixed arm motions, and loco binaries. Default planner is local rules; `--deepseek` needs `DEEPSEEK_API_KEY`.
