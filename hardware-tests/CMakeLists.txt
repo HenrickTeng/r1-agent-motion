@@ -22,3 +22,6 @@ target_link_libraries(r1_safe_wrist_wave unitree_sdk2 fmt)
 
 add_executable(r1_safe_right_shoulder_pitch_trial r1_safe_right_shoulder_pitch_trial.cpp)
 target_link_libraries(r1_safe_right_shoulder_pitch_trial unitree_sdk2 fmt)
+
+add_executable(r1_fixed_action r1_fixed_action.cpp)
+target_link_libraries(r1_fixed_action unitree_sdk2 fmt)

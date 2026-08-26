@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 option(R1_GATEWAY_BUILD_GRPC "Build the gRPC transport when development packages exist" ON)
 option(R1_GATEWAY_BUILD_TESTS "Build gateway unit tests" ON)
+option(R1_GATEWAY_BUILD_UNITREE "Build the R1 Unitree SDK hardware adapter" OFF)
 
 add_library(r1_gateway_core src/gateway_core.cpp src/locomotion_policy.cpp)
 target_include_directories(r1_gateway_core PUBLIC src)
@@ -14,6 +15,30 @@ target_link_libraries(r1_gateway_core PUBLIC pthread)
 
 add_executable(r1-gateway src/main.cpp)
 target_link_libraries(r1-gateway PRIVATE r1_gateway_core)
+
+if(R1_GATEWAY_BUILD_UNITREE)
+  if(NOT DEFINED UNITREE_SDK2_DIR)
+    set(UNITREE_SDK2_DIR "$ENV{UNITREE_SDK2_DIR}")
+  endif()
+  if(NOT UNITREE_SDK2_DIR OR NOT EXISTS "${UNITREE_SDK2_DIR}/include/unitree/robot/r1/loco/r1_loco_client.hpp")
+    message(FATAL_ERROR "R1_GATEWAY_BUILD_UNITREE requires UNITREE_SDK2_DIR")
+  endif()
+  add_library(r1_unitree_hardware src/unitree_r1_hardware.cpp)
+  target_include_directories(r1_unitree_hardware PUBLIC
+    "${UNITREE_SDK2_DIR}/include"
+    "${UNITREE_SDK2_DIR}/thirdparty/include"
+    "${UNITREE_SDK2_DIR}/thirdparty/include/ddscxx")
+  target_link_libraries(r1_unitree_hardware PRIVATE r1_gateway_core
+    "${UNITREE_SDK2_DIR}/lib/x86_64/libunitree_sdk2.a"
+    "${UNITREE_SDK2_DIR}/thirdparty/lib/x86_64/libddscxx.so"
+    "${UNITREE_SDK2_DIR}/thirdparty/lib/x86_64/libddsc.so"
+    spdlog fmt)
+  target_compile_definitions(r1_unitree_hardware PRIVATE R1_UNITREE_SDK_ENABLED=1)
+  add_executable(r1-unitree-status src/unitree_status.cpp)
+  target_link_libraries(r1-unitree-status PRIVATE r1_unitree_hardware)
+  add_executable(r1-fixed-locomotion src/fixed_locomotion.cpp)
+  target_link_libraries(r1-fixed-locomotion PRIVATE r1_unitree_hardware)
+endif()
 
 if(R1_GATEWAY_BUILD_GRPC)
   find_package(Protobuf QUIET)
@@ -40,6 +65,11 @@ if(R1_GATEWAY_BUILD_GRPC)
     target_link_libraries(r1_gateway_proto PUBLIC protobuf::libprotobuf gRPC::grpc++)
     add_executable(r1-gateway-grpc src/grpc_server.cpp)
     target_link_libraries(r1-gateway-grpc PRIVATE r1_gateway_core r1_gateway_proto gRPC::grpc++)
+    if(R1_GATEWAY_BUILD_UNITREE)
+      target_link_libraries(r1-gateway-grpc PRIVATE r1_unitree_hardware)
+      target_include_directories(r1-gateway-grpc PRIVATE "${UNITREE_SDK2_DIR}/include")
+      target_compile_definitions(r1-gateway-grpc PRIVATE R1_GATEWAY_USE_UNITREE=1)
+    endif()
   else()
     message(WARNING "gRPC C++ development packages not found; building fail-closed core only")
   endif()

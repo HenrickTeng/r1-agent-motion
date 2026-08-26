@@ -1,4 +1,7 @@
 #include "gateway_core.hpp"
+#ifdef R1_GATEWAY_USE_UNITREE
+#include "unitree_r1_hardware.hpp"
+#endif
 #include "r1_gateway.grpc.pb.h"
 
 #include <grpcpp/grpcpp.h>
@@ -192,10 +195,16 @@ class Service final : public proto::R1Gateway::Service {
 }  // namespace
 
 int main(int argc, char** argv) {
-  if (argc != 3) {
-    std::cerr << "Usage: " << argv[0] << " listenAddress tlsDirectory\n";
+  if (argc != 3 && argc != 4) {
+    std::cerr << "Usage: " << argv[0] << " listenAddress tlsDirectory [networkInterface]\n";
     return 1;
   }
+#ifdef R1_GATEWAY_USE_UNITREE
+  if (argc != 4) {
+    std::cerr << "Unitree build requires networkInterface\n";
+    return 1;
+  }
+#endif
   try {
     grpc::SslServerCredentialsOptions tls;
     tls.pem_root_certs = ReadFile(std::string(argv[2]) + "/teacher-ca.pem");
@@ -203,7 +212,11 @@ int main(int argc, char** argv) {
                                       ReadFile(std::string(argv[2]) + "/server-cert.pem")});
     tls.client_certificate_request =
         GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_AND_VERIFY;
+#ifdef R1_GATEWAY_USE_UNITREE
+    r1::motion::UnitreeR1Hardware hardware(argv[3]);
+#else
     RefusingDeploymentHardware hardware;
+#endif
     r1::motion::GatewayCore core(hardware);
     Service service(core);
     grpc::ServerBuilder builder;

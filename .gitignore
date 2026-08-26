@@ -23,3 +23,5 @@ simulation-cache/
 *.ckpt
 *.stl
 *.STL
+/robot-control.zip
+/robot-control/
