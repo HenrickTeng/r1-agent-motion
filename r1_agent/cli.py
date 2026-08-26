@@ -49,12 +49,21 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         while True:
             print("Listening on R1 ASR. Speak now...", flush=True)
-            handle(
-                robot.listen(timeout_s=args.listen_timeout),
-                planner=planner,
-                backend=backend,
-                speak_reply=True,
-            )
+            try:
+                handle(
+                    robot.listen(timeout_s=args.listen_timeout),
+                    planner=planner,
+                    backend=backend,
+                    speak_reply=True,
+                )
+            except Exception as error:
+                print(json.dumps({"error": str(error)}, ensure_ascii=False), file=sys.stderr)
+                if not args.continuous:
+                    return 2
+                try:
+                    backend.speak("这个动作当前没法执行，我停在这里。")
+                except Exception:
+                    pass
             if not args.continuous:
                 return 0
             time.sleep(args.cooldown)

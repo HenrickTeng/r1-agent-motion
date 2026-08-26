@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import time
 
 from r1_agent.asr import select_transcript
@@ -141,9 +142,17 @@ class DdsRobot:
         self._state = msg
 
     def _on_audio(self, msg) -> None:
-        text = getattr(msg, "data", "")
-        if text:
-            self._audio_lines.append(text)
+        raw = getattr(msg, "data", "")
+        if not raw:
+            return
+        try:
+            payload = json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
+            self._audio_lines.append(raw)
+            return
+        if isinstance(payload, dict) and not payload.get("text"):
+            return
+        self._audio_lines.append(raw)
 
     def _pose(self) -> list[float]:
         return [float(self._state.motor_state[joint].q) for joint in JOINTS]
