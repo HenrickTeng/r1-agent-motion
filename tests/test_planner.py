@@ -1,8 +1,10 @@
+import json
+
 import pytest
 
 from r1_agent.asr import select_transcript
 from r1_agent.executor import Executor, SimulatedBackend
-from r1_agent.planner import DeepSeekPlanner, RulePlanner
+from r1_agent.planner import DeepSeekPlanner, RulePlanner, load_deepseek_key
 
 
 def test_plans_serial_walk_then_arm():
@@ -36,6 +38,15 @@ def test_self_intro_and_salute():
     assert [action.name for action in actions] == ["self_intro", "salute_right"]
 
 
+def test_deepseek_key_file_used_when_env_missing(tmp_path, monkeypatch):
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    path = tmp_path / "deepseek_key.txt"
+    path.write_text("sk-from-file\n", encoding="utf-8")
+    assert load_deepseek_key(path) == "sk-from-file"
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-from-env")
+    assert load_deepseek_key(path) == "sk-from-env"
+
+
 def test_deepseek_rejects_unknown_action_names(monkeypatch):
     planner = DeepSeekPlanner()
     monkeypatch.setenv("DEEPSEEK_API_KEY", "test")
@@ -54,6 +65,35 @@ def test_deepseek_rejects_unknown_action_names(monkeypatch):
     reply, actions = planner.plan("挥挥手")
     assert actions == []
     assert "不会执行" in reply
+    assert planner._turns == []
+
+
+def test_deepseek_keeps_role_across_turns(monkeypatch):
+    planner = DeepSeekPlanner()
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "test")
+    seen: list[list] = []
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self):
+            return '{"choices":[{"message":{"content":"{\\"reply\\":\\"welcome\\",\\"actions\\":[\\"wave_right\\"]}"}}]}'.encode()
+
+    def fake_open(req, timeout=None):
+        seen.append(json.loads(req.data.decode())["messages"])
+        return FakeResponse()
+
+    monkeypatch.setattr("r1_agent.planner.request.urlopen", fake_open)
+    _, first = planner.plan("你是校园迎宾机器人")
+    _, second = planner.plan("远处走来一个新生")
+    assert [action.name for action in first] == ["wave_right"]
+    assert [action.name for action in second] == ["wave_right"]
+    assert seen[1][1]["content"] == "你是校园迎宾机器人"
+    assert seen[1][-1]["content"] == "远处走来一个新生"
 
 
 def test_asr_accepts_latest_meaningful_non_final_message():

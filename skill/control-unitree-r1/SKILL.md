@@ -16,7 +16,7 @@ python -m r1_agent --listen --hardware --interface en5
 python -m r1_agent --listen --continuous --deepseek --hardware --interface en5
 ```
 
-`--listen` uses R1 ASR (`rt/audio_msg`). `--hardware` runs TTS, fixed arm motions, and loco binaries. Default planner is local rules; `--deepseek` needs `DEEPSEEK_API_KEY`.
+`--listen` uses R1 ASR (`rt/audio_msg`). `--hardware` runs TTS, fixed arm motions, and loco binaries. Default planner is local rules; `--deepseek` reads `DEEPSEEK_API_KEY` or `deepseek_key.txt`. High-level roles and situations map to a short catalog sequence plus spoken `reply`; never invent bow, dance, joints, or DDS.
 
 ## Allowed actions
 

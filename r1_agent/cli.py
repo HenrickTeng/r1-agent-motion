@@ -17,10 +17,10 @@ def _planner(deepseek: bool):
 def handle(text: str, *, planner, backend, speak_reply: bool) -> None:
     reply, actions = planner.plan(text)
     print(json.dumps({"heard": text, "reply": reply, "actions": [action.name for action in actions]}, ensure_ascii=False), flush=True)
-    if speak_reply:
-        backend.speak(reply)
     if actions:
         Executor(backend).execute(actions)
+    if speak_reply:
+        backend.speak(reply)
 
 
 def main(argv: list[str] | None = None) -> int:

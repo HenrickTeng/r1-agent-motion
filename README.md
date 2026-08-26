@@ -17,6 +17,6 @@ Mac 上用 USB 网卡 `en5`，地址 `192.168.123.100`，直连 R1 `192.168.123.
 PYTHONPATH=. .venv/bin/python -m r1_agent --listen --hardware --interface en5
 ```
 
-可选 `DEEPSEEK_API_KEY` 与 `--deepseek`。动作白名单见 `actions.json`，Skill 见 `skill/control-unitree-r1/SKILL.md`。
+可选 `--deepseek`：环境变量 `DEEPSEEK_API_KEY` 或仓库根目录 `deepseek_key.txt`。动作白名单见 `actions.json`，Skill 见 `skill/control-unitree-r1/SKILL.md`。
 
 当前固件上行走写 API 可能返回 `127`；上肢固定动作、ASR、TTS 已在 Linux 真机用过。现场需要急停在手。

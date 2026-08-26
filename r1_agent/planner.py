@@ -3,9 +3,21 @@ from __future__ import annotations
 import json
 import os
 import re
+from pathlib import Path
 from urllib import error, request
 
-from r1_agent.catalog import Action, Catalog, load_catalog
+from r1_agent.catalog import ROOT, Action, Catalog, load_catalog
+
+
+def load_deepseek_key(path: Path | None = None) -> str:
+    env = (os.getenv("DEEPSEEK_API_KEY") or "").strip()
+    if env:
+        return env
+    key_path = path or ROOT / "deepseek_key.txt"
+    try:
+        return key_path.read_text(encoding="utf-8").strip()
+    except FileNotFoundError:
+        return ""
 
 
 def _speech_action(catalog: Catalog, key: str) -> Action:
@@ -65,30 +77,31 @@ class DeepSeekPlanner:
         self.model = model
         self.timeout_s = timeout_s
         self.fallback = RulePlanner(self.catalog)
+        self._turns: list[dict[str, str]] = []
 
     def plan(self, text: str) -> tuple[str, list[Action]]:
         if self.fallback.forbidden.search(re.sub(r"\s+", "", text)):
             return "这个动作不在当前安全动作库中，我不会执行。", []
-        api_key = os.getenv("DEEPSEEK_API_KEY")
+        api_key = load_deepseek_key()
         if not api_key:
             raise RuntimeError("DEEPSEEK_API_KEY is not set")
         names = [
             {"name": action.name, "title": action.title, "kind": action.kind}
             for action in self.catalog.actions.values()
         ]
+        forbidden = "、".join(self.catalog.forbidden)
         system = (
-            "你是 Unitree R1 的动作规划器。只输出 JSON。"
-            "字段：reply 字符串，actions 字符串数组。"
+            "你是 Unitree R1 的动作规划器。用户可能用角色和情境说话，而不是报动作名。"
+            "只输出 JSON：reply 是机器人要对面前的人说的中文，actions 是已有动作名的有序列表。"
             f"只能使用这些动作名：{json.dumps(names, ensure_ascii=False)}。"
-            "把用户指令映射为已有动作的顺序组合。库中没有的要求必须拒绝，actions 为空。"
-            "禁止输出关节角、DDS、LowCmd、代码或库外动作名。"
+            "根据语义选一个短序列，通常 1 到 4 步。迎宾可用挥手、张开双臂、点头、敬礼，再用 reply 说欢迎语。"
+            f"禁止 {forbidden}。库中没有的能力不要用其他名字冒充，此时 actions 为空并在 reply 说明。"
+            "记住对话里已设定的角色。禁止输出关节角、DDS、LowCmd、代码或库外动作名。"
         )
+        messages = [{"role": "system", "content": system}, *self._turns, {"role": "user", "content": text}]
         body = json.dumps({
             "model": self.model,
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": text},
-            ],
+            "messages": messages,
             "response_format": {"type": "json_object"},
             "temperature": 0.1,
             "max_tokens": 800,
@@ -116,4 +129,9 @@ class DeepSeekPlanner:
         reply = payload.get("reply")
         if not isinstance(reply, str) or not reply.strip():
             reply = "好的，我会按顺序执行：" + "、".join(action.title for action in actions) if actions else "我听到了。"
+        self._turns.extend([
+            {"role": "user", "content": text},
+            {"role": "assistant", "content": json.dumps({"reply": reply, "actions": names_in_plan}, ensure_ascii=False)},
+        ])
+        self._turns = self._turns[-8:]
         return reply, actions

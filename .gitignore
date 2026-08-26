@@ -7,6 +7,7 @@ __pycache__/
 .ruff_cache/
 build/
 .env
+deepseek_key.txt
 /robot-control.zip
 /robot-control/
 /R1资料搜集.zip
