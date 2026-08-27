@@ -68,6 +68,7 @@ class DeepSeekPlanner:
         self,
         catalog: Catalog | None = None,
         *,
+        context: str = "",
         api_url: str = "https://api.deepseek.com/chat/completions",
         model: str = "deepseek-chat",
         timeout_s: float = 20,
@@ -76,6 +77,7 @@ class DeepSeekPlanner:
         self.api_url = api_url
         self.model = model
         self.timeout_s = timeout_s
+        self.context = context.strip()
         self.fallback = RulePlanner(self.catalog)
         self._turns: list[dict[str, str]] = []
 
@@ -112,12 +114,17 @@ class DeepSeekPlanner:
             "只输出 JSON：reply 是机器人要对面前的人说的中文，actions 是原子动作名数组。"
             f"只能使用这些原子动作：{json.dumps(names, ensure_ascii=False)}。"
             "按语义选择、排序和重复这些原子动作；需要几步就用几步，但不要无意义拉长。"
+            "行走和后退支持用户明确提出的 1 到 10 步：根据步数重复选择对应的移动原子动作，不能把两步当成上限。"
+            "其中 move_forward_slow/move_backward_slow 约对应一步，move_forward_long/move_backward_long 约对应两步；步数不足时优先使用 slow 动作补齐。"
+            "左转或右转的单次指令总角度最多 360 度；超过 360 度时不要执行，reply 必须明确说明已超过安全范围并请用户重新说一个不超过 360 度的角度。"
             "同一套原子动作要能服务不同任务，不要假设用户总是在迎宾或上课。"
             "同一条计划里的行走/转向可以和上肢动作同时执行，例如边走边挥手、边走边拥抱。"
             f"不要规划 {forbidden}，也不要发明关节角、DDS、LowCmd、代码或目录外动作名。"
             "完全无法判断或目录覆盖不了：actions 为空，并在 reply 说明。"
             "记住对话上下文：已设定的角色、对象和任务要保持，后续短指令在同一情境下继续编排，直到用户明确更换。"
         )
+        if self.context:
+            system += "\n\n这是本次运行预先提供的上下文，请在整个对话中保持一致：\n" + self.context
         messages = [{"role": "system", "content": system}, *self._turns, {"role": "user", "content": text}]
         body = json.dumps({
             "model": self.model,
@@ -152,6 +159,24 @@ class DeepSeekPlanner:
                 self._remember(text, reply, [])
                 return reply, []
             actions.append(self.catalog.actions[name])
+        turn_degrees = {
+            "turn_left_10": 10,
+            "turn_right_10": 10,
+            "turn_left_20": 20,
+            "turn_right_20": 20,
+            "turn_left_45": 45,
+            "turn_right_45": 45,
+            "turn_left_90": 90,
+            "turn_right_90": 90,
+        }
+        total_turn_degrees = sum(turn_degrees.get(action.name, 0) for action in actions)
+        if total_turn_degrees > 360:
+            reply = (
+                f"检测到本次转向总角度约为 {total_turn_degrees} 度，超过安全上限 360 度。"
+                "我不会执行，请重新说一个不超过 360 度的转向指令。"
+            )
+            self._remember(text, reply, [])
+            return reply, []
         reply = payload.get("reply")
         if not isinstance(reply, str) or not reply.strip():
             reply = "好的，我会按顺序执行：" + "、".join(action.title for action in actions) if actions else "我听到了。"

@@ -8,10 +8,11 @@ import time
 from r1_agent.executor import Executor, SimulatedBackend
 from r1_agent.hardware import R1Hardware
 from r1_agent.planner import DeepSeekPlanner, RulePlanner
+from r1_agent.asr import UnsupportedTranscriptLanguage
 
 
-def _planner(*, listen: bool, deepseek: bool):
-    return DeepSeekPlanner() if listen or deepseek else RulePlanner()
+def _planner(*, listen: bool, deepseek: bool, context: str = ""):
+    return DeepSeekPlanner(context=context) if listen or deepseek else RulePlanner()
 
 
 def handle(text: str, *, planner, backend, speak_reply: bool) -> None:
@@ -30,14 +31,23 @@ def main(argv: list[str] | None = None) -> int:
     source.add_argument("--listen", action="store_true")
     parser.add_argument("--continuous", action="store_true")
     parser.add_argument("--deepseek", action="store_true")
+    parser.add_argument(
+        "--context",
+        default="",
+        help="提供给 DeepSeek 的初始上下文（身份、场景、回答风格等）",
+    )
     parser.add_argument("--hardware", action="store_true")
-    parser.add_argument("--interface", default="en5")
+    parser.add_argument(
+        "--interface",
+        default="enp7s0",
+        help="连接机器人的网卡名（Ubuntu 默认 enp7s0，可用 ip a 查看）",
+    )
     parser.add_argument("--listen-timeout", type=int, default=30)
     parser.add_argument("--cooldown", type=float, default=4.0)
     args = parser.parse_args(argv)
     if args.continuous and not args.listen:
         parser.error("--continuous requires --listen")
-    planner = _planner(listen=args.listen, deepseek=args.deepseek)
+    planner = _planner(listen=args.listen, deepseek=args.deepseek, context=args.context)
     robot = None
     if args.hardware or args.listen:
         from r1_agent.dds_robot import DdsRobot
@@ -56,6 +66,12 @@ def main(argv: list[str] | None = None) -> int:
                     backend=backend,
                     speak_reply=True,
                 )
+            except UnsupportedTranscriptLanguage as error:
+                print(json.dumps({"discarded": str(error)}, ensure_ascii=False), flush=True)
+                if not args.continuous:
+                    return 0
+                time.sleep(args.cooldown)
+                continue
             except Exception as error:
                 print(json.dumps({"error": str(error)}, ensure_ascii=False), file=sys.stderr)
                 if not args.continuous:

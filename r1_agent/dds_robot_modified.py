@@ -4,7 +4,7 @@ import json
 import math
 import time
 
-from r1_agent.asr import reject_unsupported_language, select_transcript
+from r1_agent.asr import select_transcript
 from r1_agent.catalog import Action
 
 JOINTS = (15, 16, 17, 18, 19, 22, 23, 24, 25, 26, 13, 29, 30)
@@ -253,8 +253,6 @@ class DdsRobot:
                 selected = select_transcript("\n".join(self._audio_lines), minimum_confidence=minimum_confidence)
             except ValueError:
                 selected = None
-            if selected:
-                reject_unsupported_language(selected)
             if selected and selected.get("is_final") is True:
                 return selected["text"]
             if selected and last_packet and time.time() - last_packet >= 2.5:
