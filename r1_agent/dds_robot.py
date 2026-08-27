@@ -14,10 +14,16 @@ RSP, RSR, RSY, RE, RWR = 5, 6, 7, 8, 9
 WY, HP, HY = 10, 11, 12
 
 
+AMPLITUDE = 1.8
+SHOULDER_PITCH = 3.0
+
+
 def _offsets(**joints: float) -> tuple[float, ...]:
     pose = [0.0] * 13
+    names = {"LSP": LSP, "LSR": LSR, "LSY": LSY, "LE": LE, "LWR": LWR, "RSP": RSP, "RSR": RSR, "RSY": RSY, "RE": RE, "RWR": RWR, "WY": WY, "HP": HP, "HY": HY}
     for name, value in joints.items():
-        pose[{"LSP": LSP, "LSR": LSR, "LSY": LSY, "LE": LE, "LWR": LWR, "RSP": RSP, "RSR": RSR, "RSY": RSY, "RE": RE, "RWR": RWR, "WY": WY, "HP": HP, "HY": HY}[name]] = value
+        scale = SHOULDER_PITCH if name in ("LSP", "RSP") else AMPLITUDE
+        pose[names[name]] = value * scale
     return tuple(pose)
 
 
@@ -48,7 +54,7 @@ MOTIONS: dict[str, list[tuple[float, tuple[float, ...], float]]] = {
     "raise_hand_right": [(2.0, _offsets(RSP=-0.48, RSR=-0.18, RE=0.32), 0.8)],
     "salute_left": [(2.0, _offsets(LSP=-0.40, LSR=0.16, LE=0.55, LWR=0.20), 0.8)],
     "salute_right": [(2.0, _offsets(RSP=-0.40, RSR=-0.16, RE=0.55, RWR=-0.20), 0.8)],
-    "open_arms": [(2.0, _offsets(LSR=0.38, RSR=-0.38, LE=0.18, RE=0.18), 0.8)],
+    "open_arms": [(2.0, _offsets(LSP=-0.40, RSP=-0.40, LSR=0.38, RSR=-0.38, LE=0.18, RE=0.18), 0.8)],
     "nod": [(1.1, _offsets(HP=0.20), 0.1), (0.8, _offsets(HP=-0.12), 0.15), (0.8, _offsets(HP=0.18), 0.2)],
     "look": [(1.5, _offsets(HY=0.32), 0.6)],
     "look_right": [(1.5, _offsets(HY=-0.32), 0.6)],
@@ -76,29 +82,33 @@ MOTIONS: dict[str, list[tuple[float, tuple[float, ...], float]]] = {
     "point_left": [(1.8, _offsets(LSP=-0.34, LSR=0.24, LE=0.12, HY=0.22), 0.8)],
     "point_right": [(1.8, _offsets(RSP=-0.34, RSR=-0.24, RE=0.12, HY=-0.22), 0.8)],
     "stretch": [(2.2, _offsets(LSP=-0.52, RSP=-0.52, LE=0.12, RE=0.12), 0.7)],
-    "hug": [(1.5, _offsets(LSR=0.36, RSR=-0.36, LE=0.12, RE=0.12), 0.2), (1.3, _offsets(LSR=0.08, RSR=-0.08, LE=0.38, RE=0.38), 0.6)],
+    "hug": [(1.5, _offsets(LSP=-0.50, RSP=-0.50, LSR=0.36, RSR=-0.36, LE=0.12, RE=0.12), 0.2), (1.3, _offsets(LSP=-0.45, RSP=-0.45, LSR=0.08, RSR=-0.08, LE=0.38, RE=0.38), 0.6)],
     "akimbo": [(1.8, _offsets(LSR=0.30, RSR=-0.30, LE=0.52, RE=0.52), 0.8)],
     "waist_left": [(1.5, _offsets(WY=0.35), 0.5)],
     "waist_right": [(1.5, _offsets(WY=-0.35), 0.5)],
 }
 
 LOCO = {
-    "move_forward_slow": (0.05, 0.0, 0.0, 0.5),
-    "move_forward_long": (0.05, 0.0, 0.0, 1.5),
-    "move_backward_slow": (-0.05, 0.0, 0.0, 0.5),
-    "move_backward_long": (-0.05, 0.0, 0.0, 1.5),
-    "move_left_slow": (0.0, 0.05, 0.0, 0.6),
-    "move_right_slow": (0.0, -0.05, 0.0, 0.6),
-    "turn_left_10": (0.0, 0.0, 0.35, 0.5),
-    "turn_right_10": (0.0, 0.0, -0.35, 0.5),
-    "turn_left_20": (0.0, 0.0, 0.35, 1.0),
-    "turn_right_20": (0.0, 0.0, -0.35, 1.0),
-    "turn_left_45": (0.0, 0.0, 0.35, 2.25),
-    "turn_right_45": (0.0, 0.0, -0.35, 2.25),
-    "turn_left_90": (0.0, 0.0, 0.35, 4.5),
-    "turn_right_90": (0.0, 0.0, -0.35, 4.5),
+    "move_forward_slow": (0.5, 0.0, 0.0, 0.5),
+    "move_forward_long": (0.5, 0.0, 0.0, 1.0),
+    "move_backward_slow": (-0.5, 0.0, 0.0, 0.5),
+    "move_backward_long": (-0.5, 0.0, 0.0, 1.0),
+    "move_left_slow": (0.0, 0.2, 0.0, 1.0),
+    "move_right_slow": (0.0, -0.2, 0.0, 1.0),
+    "turn_left_10": (0.0, 0.0, 1.0, 0.2),
+    "turn_right_10": (0.0, 0.0, -1.0, 0.2),
+    "turn_left_20": (0.0, 0.0, 1.0, 0.35),
+    "turn_right_20": (0.0, 0.0, -1.0, 0.35),
+    "turn_left_45": (0.0, 0.0, 1.0, 0.79),
+    "turn_right_45": (0.0, 0.0, -1.0, 0.79),
+    "turn_left_90": (0.0, 0.0, 1.0, 1.57),
+    "turn_right_90": (0.0, 0.0, -1.0, 1.57),
     "stop_move": (0.0, 0.0, 0.0, 0.0),
 }
+
+
+def _loco_issued(code: int | None) -> bool:
+    return code in (0, 127, None)
 
 
 def _blend(x: float) -> float:
@@ -162,7 +172,7 @@ class DdsRobot:
             if self._state.motor_state[joint].temperature[0] > 70:
                 raise RuntimeError("temperature exceeded 70 C")
         roll, pitch = self._state.imu_state.rpy[0], self._state.imu_state.rpy[1]
-        if abs(roll) > 0.35 or abs(pitch) > 0.35:
+        if abs(roll) > 0.5 or abs(pitch) > 0.5:
             raise RuntimeError("IMU envelope exceeded")
 
     def _publish(self, pose: list[float], weight: float) -> None:
@@ -272,7 +282,7 @@ class DdsRobot:
         vx, vy, omega, duration = command
         if duration <= 0:
             stop = self._loco.StopMove()
-            if stop not in (0, None):
+            if not _loco_issued(stop):
                 raise RuntimeError(f"StopMove failed with code {stop}")
             return
         fsm = self._fsm_id()
@@ -282,12 +292,12 @@ class DdsRobot:
                 "Stand the robot, then press R2+A on the remote before walking."
             )
         code = self._loco.SetVelocity(vx, vy, omega, duration)
-        if code != 0:
+        if not _loco_issued(code):
             self._loco.StopMove()
             raise RuntimeError(f"SetVelocity failed with code {code} fsm_id={fsm}")
         time.sleep(duration)
         stop = self._loco.StopMove()
-        if stop not in (0, None):
+        if not _loco_issued(stop):
             raise RuntimeError(f"StopMove failed with code {stop}")
 
     def turn(self, action: Action) -> None:

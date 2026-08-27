@@ -79,6 +79,15 @@ class DeepSeekPlanner:
         self.fallback = RulePlanner(self.catalog)
         self._turns: list[dict[str, str]] = []
 
+    def _remember(self, text: str, reply: str, names: list[str]) -> None:
+        if not names and any(token in reply for token in ("没听清", "没能理解", "请再说")):
+            return
+        self._turns.extend([
+            {"role": "user", "content": text},
+            {"role": "assistant", "content": json.dumps({"reply": reply, "actions": names}, ensure_ascii=False)},
+        ])
+        self._turns = self._turns[-24:]
+
     def plan(self, text: str) -> tuple[str, list[Action]]:
         api_key = load_deepseek_key()
         if not api_key:
@@ -104,10 +113,10 @@ class DeepSeekPlanner:
             f"只能使用这些原子动作：{json.dumps(names, ensure_ascii=False)}。"
             "按语义选择、排序和重复这些原子动作；需要几步就用几步，但不要无意义拉长。"
             "同一套原子动作要能服务不同任务，不要假设用户总是在迎宾或上课。"
-            "上肢和行走必须串行：先走再挥手，或先挥手再走，不要假设能边走边做手势。"
+            "同一条计划里的行走/转向可以和上肢动作同时执行，例如边走边挥手、边走边拥抱。"
             f"不要规划 {forbidden}，也不要发明关节角、DDS、LowCmd、代码或目录外动作名。"
             "完全无法判断或目录覆盖不了：actions 为空，并在 reply 说明。"
-            "记住对话上下文，以便后续指示在已设定的角色或任务上继续组合。"
+            "记住对话上下文：已设定的角色、对象和任务要保持，后续短指令在同一情境下继续编排，直到用户明确更换。"
         )
         messages = [{"role": "system", "content": system}, *self._turns, {"role": "user", "content": text}]
         body = json.dumps({
@@ -128,21 +137,23 @@ class DeepSeekPlanner:
                 envelope = json.loads(response.read())
             payload = json.loads(envelope["choices"][0]["message"]["content"])
         except (error.URLError, TimeoutError, KeyError, json.JSONDecodeError, IndexError, TypeError):
-            return self.fallback.plan(text)
+            reply, actions = self.fallback.plan(text)
+            self._remember(text, reply, [action.name for action in actions])
+            return reply, actions
         names_in_plan = payload.get("actions") or []
         if not isinstance(names_in_plan, list):
-            return self.fallback.plan(text)
+            reply, actions = self.fallback.plan(text)
+            self._remember(text, reply, [action.name for action in actions])
+            return reply, actions
         actions: list[Action] = []
         for name in names_in_plan:
             if not isinstance(name, str) or name not in self.catalog.actions:
-                return "这个动作不在当前安全动作库中，我不会执行。", []
+                reply = "这个动作不在当前安全动作库中，我不会执行。"
+                self._remember(text, reply, [])
+                return reply, []
             actions.append(self.catalog.actions[name])
         reply = payload.get("reply")
         if not isinstance(reply, str) or not reply.strip():
             reply = "好的，我会按顺序执行：" + "、".join(action.title for action in actions) if actions else "我听到了。"
-        self._turns.extend([
-            {"role": "user", "content": text},
-            {"role": "assistant", "content": json.dumps({"reply": reply, "actions": names_in_plan}, ensure_ascii=False)},
-        ])
-        self._turns = self._turns[-8:]
+        self._remember(text, reply, names_in_plan)
         return reply, actions

@@ -14,19 +14,16 @@ def test_listen_defaults_to_deepseek_planner():
     assert isinstance(_planner(listen=False, deepseek=True), DeepSeekPlanner)
 
 
-def test_plans_serial_walk_then_arm():
+def test_plans_walk_and_arm_together():
     _, actions = RulePlanner().plan("请向前走一步，然后向左转，再挥右手")
     assert [action.name for action in actions] == ["move_forward_slow", "turn_left_10", "wave_right"]
     backend = SimulatedBackend()
     Executor(backend).execute(actions)
-    assert backend.events == [
-        "MOVE move_forward_slow {'vx': 0.05, 'vy': 0.0, 'omega': 0.0, 'duration': 0.5}",
-        "STOP",
-        "TURN turn_left_10 {'vx': 0.0, 'vy': 0.0, 'omega': 0.35, 'duration': 0.5}",
-        "STOP",
-        "ARM wave_right",
-        "STOP",
-    ]
+    kinds = [event.split()[0] + (" " + event.split()[1] if event.split()[0] in {"MOVE", "TURN", "ARM"} else "") for event in backend.events]
+    assert "MOVE move_forward_slow" in kinds
+    assert "TURN turn_left_10" in kinds
+    assert "ARM wave_right" in kinds
+    assert kinds[-1] == "STOP"
 
 
 def test_longest_alias_wins_for_twenty_degree_turn():
@@ -37,6 +34,8 @@ def test_longest_alias_wins_for_twenty_degree_turn():
 def test_loco_aliases_and_waist():
     _, actions = RulePlanner().plan("向前走两步然后向左转四十五度再停下")
     assert [action.name for action in actions] == ["move_forward_long", "turn_left_45", "stop_move"]
+    _, ninety = RulePlanner().plan("左转90度")
+    assert [action.name for action in ninety] == ["turn_left_90"]
     _, waist = RulePlanner().plan("向左转腰")
     assert [action.name for action in waist] == ["waist_left"]
 
@@ -79,7 +78,8 @@ def test_deepseek_rejects_unknown_action_names(monkeypatch):
     reply, actions = planner.plan("挥挥手")
     assert actions == []
     assert "不会执行" in reply
-    assert planner._turns == []
+    assert planner._turns[0]["content"] == "挥挥手"
+    assert "dance" not in planner._turns[1]["content"]
 
 
 def test_deepseek_runs_composed_atom_sequence(monkeypatch):
@@ -129,6 +129,9 @@ def test_deepseek_prompt_is_general_composition(monkeypatch):
     assert "wrist_wave" in captured["system"]
     assert "不要为某个场景写死套路" in captured["system"]
     assert "迎宾可用" not in captured["system"]
+    assert "同时执行" in captured["system"]
+    assert "必须串行" not in captured["system"]
+    assert "已设定的角色" in captured["system"]
 
 
 def test_deepseek_keeps_context_across_turns(monkeypatch):
@@ -155,6 +158,43 @@ def test_deepseek_keeps_context_across_turns(monkeypatch):
     planner.plan("请按刚才的角色继续")
     assert seen[1][1]["content"] == "先记住你现在是课堂助手"
     assert seen[1][-1]["content"] == "请按刚才的角色继续"
+
+
+def test_deepseek_keeps_role_after_unclear_asr(monkeypatch):
+    planner = DeepSeekPlanner()
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "test")
+    replies = [
+        '{"choices":[{"message":{"content":"{\\"reply\\":\\"我是校园机器人\\",\\"actions\\":[\\"self_intro\\"]}"}}]}'.encode(),
+        '{"choices":[{"message":{"content":"{\\"reply\\":\\"抱歉，我没听清您的意思，请再说一遍好吗？\\",\\"actions\\":[]}"}}]}'.encode(),
+        '{"choices":[{"message":{"content":"{\\"reply\\":\\"欢迎\\",\\"actions\\":[\\"wave_right\\"]}"}}]}'.encode(),
+    ]
+    seen: list[list] = []
+
+    class FakeResponse:
+        def __init__(self, payload: bytes) -> None:
+            self.payload = payload
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self):
+            return self.payload
+
+    def fake_open(req, timeout=None):
+        seen.append(json.loads(req.data.decode())["messages"])
+        return FakeResponse(replies.pop(0))
+
+    monkeypatch.setattr("r1_agent.planner.request.urlopen", fake_open)
+    planner.plan("你现在是校园迎宾机器人")
+    planner.plan("是管我们个个业绩。")
+    planner.plan("请过来迎接我")
+    contents = [message["content"] for message in seen[2]]
+    assert "你现在是校园迎宾机器人" in contents
+    assert "是管我们个个业绩。" not in contents
+    assert planner._turns[-1]["content"] == '{"reply": "欢迎", "actions": ["wave_right"]}' or "wave_right" in planner._turns[-1]["content"]
 
 
 def test_asr_prefers_final_over_later_partial():

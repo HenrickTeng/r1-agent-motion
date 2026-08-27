@@ -1,5 +1,7 @@
+import pytest
+
 from r1_agent.catalog import load_catalog
-from r1_agent.dds_robot import LOCO, MOTIONS
+from r1_agent.dds_robot import AMPLITUDE, LOCO, MOTIONS, RSP, SHOULDER_PITCH, _loco_issued
 from r1_agent.hardware import R1Hardware
 
 
@@ -37,6 +39,25 @@ def test_wrist_wave_uses_same_runner():
     assert robot.calls == [("arm", "wrist_wave")]
 
 
+def test_arm_offsets_are_scaled_up():
+    assert AMPLITUDE == 1.8
+    assert SHOULDER_PITCH == 3.0
+    pose = MOTIONS["wave_right"][0][1]
+    assert pose[RSP] == pytest.approx(-0.50 * SHOULDER_PITCH)
+    hug = MOTIONS["hug"][0][1]
+    assert hug[1] == pytest.approx(0.36 * AMPLITUDE)
+    assert hug[0] == pytest.approx(-0.50 * SHOULDER_PITCH)
+    assert hug[RSP] == pytest.approx(-0.50 * SHOULDER_PITCH)
+
+
+def test_loco_issued_accepts_firmware_127():
+    assert _loco_issued(0)
+    assert _loco_issued(127)
+    assert _loco_issued(None)
+    assert not _loco_issued(3203)
+    assert not _loco_issued(1001)
+
+
 def test_catalog_arm_and_loco_names_match_runners():
     catalog = load_catalog()
     for action in catalog.actions.values():
@@ -44,3 +65,5 @@ def test_catalog_arm_and_loco_names_match_runners():
             assert action.name in MOTIONS
         elif action.kind in ("move", "turn"):
             assert action.name in LOCO
+            vx, vy, omega, duration = LOCO[action.name]
+            assert action.args == {"vx": vx, "vy": vy, "omega": omega, "duration": duration}

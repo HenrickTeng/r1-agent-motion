@@ -30,9 +30,9 @@ Compositions: 欢迎, 问候学生, 邀请回答, 回答正确, 再试一次, �
 
 ## Rules
 
-- Plan a serial list of catalog atoms for any instruction. Never output joint angles, `LowCmd`, DDS topics, Shell, or Python for the robot.
+- Plan a list of catalog atoms for any instruction. Never output joint angles, `LowCmd`, DDS topics, Shell, or Python for the robot.
 - Do not add scene-specific actions. Compose existing names; if the catalog cannot cover the request, return no actions.
 - Reject 跳舞, 跳跃, 鞠躬, 下蹲, 跑步, 翻滚, and any name not in the catalog. Say it is not in the action library.
-- Upper-body and walking are serial, never overlapping.
-- If loco `SetVelocity` fails (this firmware has returned `127`), skip the rest of that plan, say it cannot walk, and keep listening if `--continuous`. Walking needs FSM `811` (remote **R2+A** after standing). Do not call `Start()` unless the robot is hung or already in stance as in the official example.
+- Walking/turning in the same plan run in parallel with arm motions. Keep the DeepSeek role and task across turns until the user changes them.
+- Walking needs FSM `811` (remote **R2+A** after standing). This firmware returns `127` from `SetVelocity` even when the robot does walk; treat `127` as issued and wait for the command duration. Do not call `Start()` unless the robot is hung or already in stance as in the official example. If loco fails with any other code, skip the rest of that plan, say it cannot walk, and keep listening if `--continuous`.
 - After TTS, wait before the next ASR turn so the robot does not hear itself.

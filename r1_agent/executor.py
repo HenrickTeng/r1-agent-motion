@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from typing import Protocol
 
 from r1_agent.catalog import Action
@@ -42,15 +43,48 @@ class Executor:
         self.backend = backend
 
     def execute(self, actions: list[Action]) -> None:
-        for action in actions:
+        index = 0
+        while index < len(actions):
+            action = actions[index]
             if action.kind == "speech":
                 self.backend.speak(action.args["text"])
-            elif action.kind == "move":
-                self.backend.move(action)
-                self.backend.stop()
-            elif action.kind == "turn":
-                self.backend.turn(action)
-                self.backend.stop()
-            else:
-                self.backend.arm(action)
+                index += 1
+                continue
+            group: list[Action] = []
+            while index < len(actions) and actions[index].kind != "speech":
+                group.append(actions[index])
+                index += 1
+            self._execute_body(group)
         self.backend.stop()
+
+    def _run_locos(self, locos: list[Action], errors: list[BaseException]) -> None:
+        try:
+            for action in locos:
+                if action.kind == "move":
+                    self.backend.move(action)
+                else:
+                    self.backend.turn(action)
+                self.backend.stop()
+        except BaseException as error:
+            errors.append(error)
+
+    def _execute_body(self, group: list[Action]) -> None:
+        locos = [action for action in group if action.kind in ("move", "turn")]
+        arms = [action for action in group if action.kind == "arm"]
+        errors: list[BaseException] = []
+        if locos and arms:
+            thread = threading.Thread(target=self._run_locos, args=(locos, errors))
+            thread.start()
+            try:
+                for action in arms:
+                    self.backend.arm(action)
+            except BaseException as error:
+                errors.append(error)
+            thread.join()
+        elif locos:
+            self._run_locos(locos, errors)
+        else:
+            for action in arms:
+                self.backend.arm(action)
+        if errors:
+            raise errors[0]
