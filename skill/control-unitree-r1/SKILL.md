@@ -11,12 +11,13 @@ Laptop on the robot Ethernet talks DDS directly. The model only chooses named ac
 
 ```bash
 python -m r1_agent --text "请介绍自己，然后挥右手"
-python -m r1_agent --text "挥右手然后敬礼" --hardware --interface enp7s0
-python -m r1_agent --listen --hardware --interface enp7s0
-python -m r1_agent --listen --continuous --hardware --interface enp7s0
+python -m r1_agent --text "挥右手然后敬礼" --hardware
+python -m r1_agent --listen --hardware
+python -m r1_agent --listen --continuous --hardware
+python -m r1_agent --text "校长来了" --scene scenes/classroom
 ```
 
-`--listen` uses R1 ASR (`rt/audio_msg`) and DeepSeek to recover garbled transcripts into catalog atoms. `--hardware` runs TTS, fixed arm motions, and loco. Typed `--text` stays on local rules unless you also pass `--deepseek`. Keys: `DEEPSEEK_API_KEY` or `deepseek_key.txt`.
+`--listen` uses R1 ASR (`rt/audio_msg`) and DeepSeek to recover garbled transcripts into catalog atoms. `--hardware` runs TTS, fixed arm motions, and loco. Default `--interface auto` binds the NIC that has `192.168.123.x` (Mac `en5`, Ubuntu `enp7s0`). Typed `--text` stays on local rules unless you also pass `--deepseek`. `--scene` loads a student pack (`context.txt` + `pack.json` compositions/aliases) shared by both planners. Keys: `DEEPSEEK_API_KEY` or `deepseek_key.txt`.
 
 ## Allowed actions
 
@@ -34,5 +35,7 @@ Compositions: 欢迎, 问候学生, 邀请回答, 回答正确, 再试一次, �
 - Do not add scene-specific actions. Compose existing names; if the catalog cannot cover the request, return no actions.
 - Reject 跳舞, 跳跃, 鞠躬, 下蹲, 跑步, 翻滚, and any name not in the catalog. Say it is not in the action library.
 - Walking/turning in the same plan run in parallel with arm motions. Keep the DeepSeek role and task across turns until the user changes them.
+- `--scene` packs may add compositions, aliases, and spoken lines, but cannot add atoms, joints, or DDS.
 - Walking needs FSM `811` (remote **R2+A** after standing). This firmware returns `127` from `SetVelocity` even when the robot does walk; treat `127` as issued and wait for the command duration. Do not call `Start()` unless the robot is hung or already in stance as in the official example. If loco fails with any other code, skip the rest of that plan, say it cannot walk, and keep listening if `--continuous`.
 - After TTS, wait before the next ASR turn so the robot does not hear itself.
+- Each listen turn starts with spoken 请说. End the utterance on silence (~3s with no new ASR packet), not a fixed speaking clock.

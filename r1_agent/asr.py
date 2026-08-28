@@ -10,10 +10,6 @@ from r1_agent.catalog import ROOT
 PUNCTUATION_ONLY = set(string.punctuation + "，。！？、；：‘’“”（）《》…")
 
 
-class UnsupportedTranscriptLanguage(RuntimeError):
-    """ASR selected a transcript explicitly marked as an unsupported language."""
-
-
 def _usable_text(text: str) -> bool:
     compact = "".join(character for character in text if character not in PUNCTUATION_ONLY and not character.isspace())
     return sum(1 for character in compact if "\u4e00" <= character <= "\u9fff") >= 2
@@ -41,14 +37,6 @@ def select_transcript(output: str, *, minimum_confidence: float = 0.45) -> dict:
         raise ValueError("ASR output contains no acceptable transcript")
     final = [candidate for candidate in candidates if candidate.get("is_final") is True]
     return max(final, key=lambda item: item.get("confidence", 0)) if final else candidates[-1]
-
-
-def reject_unsupported_language(message: dict) -> None:
-    language = message.get("language")
-    if isinstance(language, str) and ("<|ja|>" in language.lower() or "japanese" in language.lower()):
-        raise UnsupportedTranscriptLanguage(
-            f"ASR transcript language={language}; discarded without planning"
-        )
 
 
 def listen_once(

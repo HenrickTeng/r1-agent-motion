@@ -11,7 +11,7 @@
     3. 已装 unitree_sdk2_python（吴博版环境已满足）。
 
 用法（在 Ubuntu 项目根目录）：
-    PYTHONPATH=. python3 read_ready_pose.py
+    PYTHONPATH=. python3 scripts/read_ready_pose.py
 
 输出：13 个关节的 q（弧度）+ 度，以及可直接贴回改造用的 JSON。
 """
@@ -29,12 +29,13 @@ NAMES = ["LSP", "LSR", "LSY", "LE", "LWR", "RSP", "RSR", "RSY", "RE", "RWR", "WY
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="读取 R1 ready_pose 绝对角度")
-    ap.add_argument("--interface", default="auto", help="网卡名；默认 auto（SDK 自动选择）")
+    ap.add_argument("--interface", default="auto", help="网卡名；默认 auto，选用 192.168.123.x")
     ap.add_argument("--samples", type=int, default=10, help="采样次数取平均")
     args = ap.parse_args()
 
-    interface = None if args.interface.lower() == "auto" else args.interface
-    ChannelFactoryInitialize(0, interface)
+    from r1_agent.interface import resolve_interface
+
+    ChannelFactoryInitialize(0, resolve_interface(args.interface))
     holder: dict = {}
 
     def on_lowstate(msg) -> None:

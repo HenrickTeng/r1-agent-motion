@@ -139,7 +139,7 @@ def _blend(x: float) -> float:
 
 
 class DdsRobot:
-    def __init__(self, interface: str = "enp7s0") -> None:
+    def __init__(self, interface: str = "auto") -> None:
         from unitree_sdk2py.core.channel import ChannelFactoryInitialize, ChannelPublisher, ChannelSubscriber
         from unitree_sdk2py.g1.audio.g1_audio_client import AudioClient
         from unitree_sdk2py.idl.default import unitree_hg_msg_dds__LowCmd_
@@ -148,8 +148,10 @@ class DdsRobot:
         from unitree_sdk2py.r1.loco.r1_loco_client import LocoClient
         from unitree_sdk2py.utils.crc import CRC
 
-        dds_interface = None if interface in ("auto", "enp7s0") else interface
-        ChannelFactoryInitialize(0, dds_interface)
+        from r1_agent.interface import resolve_interface
+
+        self._interface = resolve_interface(interface)
+        ChannelFactoryInitialize(0, self._interface)
         self._state = None
         self._audio_lines: list[str] = []
         self._cmd = unitree_hg_msg_dds__LowCmd_()
@@ -160,7 +162,7 @@ class DdsRobot:
         while self._state is None and time.time() < deadline:
             time.sleep(0.05)
         if self._state is None:
-            raise RuntimeError("rt/lowstate timed out on " + interface)
+            raise RuntimeError("rt/lowstate timed out on " + self._interface)
         self._arm = ChannelPublisher("rt/arm_sdk", LowCmd_)
         self._arm.Init()
         self._asr = ChannelSubscriber("rt/audio_msg", String_)

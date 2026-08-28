@@ -6,9 +6,9 @@
 
 | 文件 | 说明 |
 |---|---|
-| `read_ready_pose.py` | 读取 R1 的 ready_pose 绝对角度（13 关节），供后续「动作清单存绝对角度」改造当零位 |
+| `scripts/read_ready_pose.py` | 读取 R1 的 ready_pose 绝对角度（13 关节），供后续「动作清单存绝对角度」改造当零位 |
 | `tests/test_degree_conversion.py` | 度↔弧度换算精度测试（已跑通，最大误差 0.005°，远小于 2~3 度） |
-| `动作角度清单.md` | 30 个动作的关节角度（度/弧度）参考，供动作编辑/模仿项目用 |
+| `docs/动作角度清单.md` | 30 个动作的关节角度（度/弧度）参考，供动作编辑/模仿项目用 |
 
 > 说明：本次**没有改 `dds_robot.py` 本体**。动作仍用吴博原来的「系数×振幅 + 偏移量」写法，真机行为与吴博版完全一致。后续「存度 + 绝对角度」改造等拿到 ready_pose 数据再做。
 
@@ -40,7 +40,7 @@ Python 需 ≥ 3.11。
 
 ```bash
 # ① 只读连接 + 读 ready_pose（不动机器人，顺便拿零位数据）
-PYTHONPATH=. .venv/bin/python read_ready_pose.py --interface enp7s0
+PYTHONPATH=. .venv/bin/python scripts/read_ready_pose.py --interface enp7s0
 
 # ② 文字指令（不连真机，验证规划器，不需要 DeepSeek key）
 PYTHONPATH=. .venv/bin/python -m r1_agent --text "请介绍自己，然后挥右手"

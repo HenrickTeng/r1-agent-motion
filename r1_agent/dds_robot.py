@@ -4,7 +4,7 @@ import json
 import math
 import time
 
-from r1_agent.asr import reject_unsupported_language, select_transcript
+from r1_agent.asr import select_transcript
 from r1_agent.catalog import Action
 
 JOINTS = (15, 16, 17, 18, 19, 22, 23, 24, 25, 26, 13, 29, 30)
@@ -139,7 +139,7 @@ def _blend(x: float) -> float:
 
 
 class DdsRobot:
-    def __init__(self, interface: str = "enp7s0") -> None:
+    def __init__(self, interface: str = "auto") -> None:
         from unitree_sdk2py.core.channel import ChannelFactoryInitialize, ChannelPublisher, ChannelSubscriber
         from unitree_sdk2py.g1.audio.g1_audio_client import AudioClient
         from unitree_sdk2py.idl.default import unitree_hg_msg_dds__LowCmd_
@@ -148,8 +148,10 @@ class DdsRobot:
         from unitree_sdk2py.r1.loco.r1_loco_client import LocoClient
         from unitree_sdk2py.utils.crc import CRC
 
-        dds_interface = None if interface in ("auto", "enp7s0") else interface
-        ChannelFactoryInitialize(0, dds_interface)
+        from r1_agent.interface import resolve_interface
+
+        self._interface = resolve_interface(interface)
+        ChannelFactoryInitialize(0, self._interface)
         self._state = None
         self._audio_lines: list[str] = []
         self._cmd = unitree_hg_msg_dds__LowCmd_()
@@ -160,7 +162,7 @@ class DdsRobot:
         while self._state is None and time.time() < deadline:
             time.sleep(0.05)
         if self._state is None:
-            raise RuntimeError("rt/lowstate timed out on " + interface)
+            raise RuntimeError("rt/lowstate timed out on " + self._interface)
         self._arm = ChannelPublisher("rt/arm_sdk", LowCmd_)
         self._arm.Init()
         self._asr = ChannelSubscriber("rt/audio_msg", String_)
@@ -238,35 +240,31 @@ class DdsRobot:
         if code != 0:
             raise RuntimeError(f"TTS failed with code {code}")
 
-    def listen(self, timeout_s: int = 30, minimum_confidence: float = 0.45) -> str:
+    def listen(self, timeout_s: int = 45, minimum_confidence: float = 0.45, silence_s: float = 3.0) -> str:
         self._audio_lines = []
         last_count = 0
         last_packet = None
         selected = None
-        deadline = time.time() + timeout_s
-        while time.time() < deadline:
+        started = time.time()
+        while True:
+            now = time.time()
+            if selected is None and now - started >= timeout_s:
+                sample = self._audio_lines[-3:] if self._audio_lines else []
+                raise RuntimeError(
+                    "ASR timeout: enable microphone wake mode using the R1 app or remote. "
+                    f"packets={len(self._audio_lines)} sample={sample}"
+                )
             if len(self._audio_lines) != last_count:
                 last_count = len(self._audio_lines)
-                last_packet = time.time()
+                last_packet = now
                 print(f"ASR packet: {self._audio_lines[-1]}", flush=True)
             try:
                 selected = select_transcript("\n".join(self._audio_lines), minimum_confidence=minimum_confidence)
             except ValueError:
                 selected = None
-            if selected:
-                reject_unsupported_language(selected)
-            if selected and selected.get("is_final") is True:
-                return selected["text"]
-            if selected and last_packet and time.time() - last_packet >= 2.5:
+            if selected and last_packet and now - last_packet >= silence_s:
                 return selected["text"]
             time.sleep(0.05)
-        if selected:
-            return selected["text"]
-        sample = self._audio_lines[-3:] if self._audio_lines else []
-        raise RuntimeError(
-            "ASR timeout: enable microphone wake mode using the R1 app or remote. "
-            f"packets={len(self._audio_lines)} sample={sample}"
-        )
 
     def arm(self, action: Action | str) -> None:
         name = action if isinstance(action, str) else action.name

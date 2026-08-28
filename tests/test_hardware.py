@@ -1,7 +1,9 @@
+import math
+
 import pytest
 
 from r1_agent.catalog import load_catalog
-from r1_agent.dds_robot import AMPLITUDE, LOCO, MOTIONS, RSP, SHOULDER_PITCH, _loco_issued
+from r1_agent.dds_robot import AMPLITUDE, LOCO, MOTIONS, READY_POSE_DEG, RSP, SHOULDER_PITCH, _loco_issued
 from r1_agent.hardware import R1Hardware
 
 
@@ -43,11 +45,11 @@ def test_arm_offsets_are_scaled_up():
     assert AMPLITUDE == 1.8
     assert SHOULDER_PITCH == 3.0
     pose = MOTIONS["wave_right"][0][1]
-    assert pose[RSP] == pytest.approx(-0.50 * SHOULDER_PITCH)
+    assert pose[RSP] == pytest.approx(READY_POSE_DEG[RSP] + (-0.50 * SHOULDER_PITCH * 180.0 / math.pi))
     hug = MOTIONS["hug"][0][1]
-    assert hug[1] == pytest.approx(0.36 * AMPLITUDE)
-    assert hug[0] == pytest.approx(-0.50 * SHOULDER_PITCH)
-    assert hug[RSP] == pytest.approx(-0.50 * SHOULDER_PITCH)
+    assert hug[1] == pytest.approx(READY_POSE_DEG[1] + (0.36 * AMPLITUDE * 180.0 / math.pi))
+    assert hug[0] == pytest.approx(READY_POSE_DEG[0] + (-0.50 * SHOULDER_PITCH * 180.0 / math.pi))
+    assert hug[RSP] == pytest.approx(READY_POSE_DEG[RSP] + (-0.50 * SHOULDER_PITCH * 180.0 / math.pi))
 
 
 def test_loco_issued_accepts_firmware_127():

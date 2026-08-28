@@ -4,7 +4,7 @@ from r1_agent.catalog import Action
 
 
 class R1Hardware:
-    def __init__(self, interface: str = "enp7s0", robot=None) -> None:
+    def __init__(self, interface: str = "auto", robot=None) -> None:
         if robot is None:
             from r1_agent.dds_robot import DdsRobot
             robot = DdsRobot(interface)

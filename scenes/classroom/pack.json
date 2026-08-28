@@ -1,0 +1,12 @@
+{
+  "speech": {
+    "greeting": "同学们好，欢迎来上课。"
+  },
+  "compositions": {
+    "欢迎来宾": ["open_arms", "wave_right"]
+  },
+  "aliases": {
+    "后短信": "move_backward_slow",
+    "校长来了": "欢迎来宾"
+  }
+}
