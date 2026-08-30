@@ -5,7 +5,9 @@ import math
 import time
 
 from r1_agent.asr import select_transcript
+from r1_agent.arm_safety import DT_S, move_duration_s, slew_toward
 from r1_agent.catalog import Action
+from r1_agent.elbow_map import pose13_elbows_human_to_hw
 
 JOINTS = (15, 16, 17, 18, 19, 22, 23, 24, 25, 26, 13, 29, 30)
 KP = (50, 50, 40, 40, 30, 50, 50, 40, 40, 30, 50, 15, 15)
@@ -140,6 +142,9 @@ def _blend(x: float) -> float:
 
 class DdsRobot:
     def __init__(self, interface: str = "auto") -> None:
+        from r1_agent.dds_setup import prepare_cyclonedds
+
+        prepare_cyclonedds()
         from unitree_sdk2py.core.channel import ChannelFactoryInitialize, ChannelPublisher, ChannelSubscriber
         from unitree_sdk2py.g1.audio.g1_audio_client import AudioClient
         from unitree_sdk2py.idl.default import unitree_hg_msg_dds__LowCmd_
@@ -173,6 +178,8 @@ class DdsRobot:
         self._loco = LocoClient()
         self._loco.SetTimeout(10.0)
         self._loco.Init()
+        self._q_cmd = self._pose()
+        self._estop = False
 
     def _on_lowstate(self, msg) -> None:
         self._state = msg
@@ -214,16 +221,22 @@ class DdsRobot:
         self._arm.Write(self._cmd)
 
     def _move_pose(self, start: list[float], end: list[float], seconds: float) -> None:
+        if self._estop:
+            raise RuntimeError("soft estop: motion blocked")
+        duration = move_duration_s(start, end, seconds)
         t0 = time.time()
         while True:
-            x = min(1.0, (time.time() - t0) / max(seconds, 0.01))
+            if self._estop:
+                raise RuntimeError("soft estop: motion blocked")
+            x = min(1.0, (time.time() - t0) / max(duration, 0.01))
             s = _blend(x)
             pose = [a + (b - a) * s for a, b in zip(start, end)]
+            self._q_cmd = pose
             self._publish(pose, 1.0)
             self._check()
             if x >= 1.0:
                 return
-            time.sleep(0.01)
+            time.sleep(DT_S)
 
     def _release(self) -> None:
         pose = self._pose()
@@ -288,7 +301,13 @@ class DdsRobot:
             self._move_pose(previous, ready, 2.0)
             self._release()
         except Exception:
-            self._release()
+            if self._estop:
+                try:
+                    self._publish(self._q_cmd, 1.0)
+                except Exception:
+                    pass
+            else:
+                self._release()
             raise
 
     def _fsm_id(self) -> int | None:
@@ -301,6 +320,15 @@ class DdsRobot:
             return int(payload["data"])
         except (json.JSONDecodeError, TypeError, KeyError, ValueError):
             return None
+
+    def require_walk_run(self) -> int:
+        """走跑模式 fsm 811。只查询，不 SetFsmId。"""
+        fsm = self._fsm_id()
+        if fsm != 811:
+            raise RuntimeError(
+                f"当前 fsm_id={fsm}，需要走跑 811。保持走跑站稳，不要进调试，不要 Damp。"
+            )
+        return fsm
 
     def move(self, action: Action | str) -> None:
         name = action if isinstance(action, str) else action.name
@@ -331,5 +359,63 @@ class DdsRobot:
     def turn(self, action: Action) -> None:
         self.move(action)
 
+    def track_arm(self, arm_rad: dict[str, float], dt: float) -> None:
+        """实时跟臂：10 个上肢关节，腰/头保持待机。已急停则只维持当前指令。"""
+        ready = [math.radians(deg) for deg in READY_POSE_DEG]
+        names = (
+            "left_shoulder_pitch",
+            "left_shoulder_roll",
+            "left_shoulder_yaw",
+            "left_elbow",
+            "left_wrist_roll",
+            "right_shoulder_pitch",
+            "right_shoulder_roll",
+            "right_shoulder_yaw",
+            "right_elbow",
+            "right_wrist_roll",
+        )
+        target = list(self._q_cmd if self._q_cmd else ready)
+        if len(target) < 13:
+            target = ready[:]
+        if arm_rad:
+            for index, name in enumerate(names):
+                if name in arm_rad:
+                    target[index] = float(arm_rad[name])
+            target = pose13_elbows_human_to_hw(target)
+        target[10] = ready[10]
+        target[11] = ready[11]
+        target[12] = ready[12]
+        if not self._estop:
+            self._q_cmd = slew_toward(self._q_cmd if len(self._q_cmd) == 13 else ready, target, dt)
+        self._publish(self._q_cmd, 1.0)
+        self._check()
+
+    def goto_ready(self, seconds: float = 3.0) -> None:
+        current = self._pose()
+        ready = [math.radians(deg) for deg in READY_POSE_DEG]
+        self._publish(current, 1.0)
+        self._q_cmd = current
+        self._move_pose(current, ready, seconds)
+
+    def soft_estop(self) -> None:
+        """软急停：停步 + 锁住当前上肢指令。不进 Damp，以免摔倒。"""
+        self._estop = True
+        try:
+            self._loco.StopMove()
+        except Exception:
+            pass
+        self._q_cmd = self._pose()
+        self._publish(self._q_cmd, 1.0)
+
+    def clear_estop(self) -> None:
+        self._estop = False
+        self._q_cmd = self._pose()
+
     def stop(self) -> None:
-        return None
+        try:
+            self._loco.StopMove()
+        except Exception:
+            pass
+        if self._state is not None:
+            self._q_cmd = self._pose()
+            self._publish(self._q_cmd, 1.0)

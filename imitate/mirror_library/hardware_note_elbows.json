@@ -1,0 +1,17 @@
+{
+  "laterality": "selfie_mirror_user_right_is_robot_left",
+  "not_agent_catalog": true,
+  "hardware": "walk-run 811, rt/arm_sdk",
+  "elbows": "human 0=straight 45=ready; encoder ~95 looks straight, ~45 ready bend. Map in r1_agent/elbow_map.py before arm_sdk.",
+  "notes": [
+    {
+      "pose": "hands_chest",
+      "human_elbow_deg": {"LE": 95.0, "RE": 95.0},
+      "after_map": "encoder ~-10° looks flexed (chest). Commanding encoder 95° without map looks straight."
+    },
+    {
+      "pose": "salute_user_right",
+      "meaning": "user right → robot left (blue)"
+    }
+  ]
+}

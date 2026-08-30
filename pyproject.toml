@@ -11,12 +11,14 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=8.3,<9"]
+imitate = ["mujoco>=3.2", "numpy", "opencv-python", "mediapipe>=0.10"]
 
 [project.scripts]
 r1-agent = "r1_agent.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["r1_agent*"]
+include = ["r1_agent*", "imitate"]
+exclude = ["imitate.library*", "imitate.mirror_library*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

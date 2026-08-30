@@ -33,6 +33,14 @@ PYTHONPATH=. .venv-r1/bin/python -m r1_agent \
 
 当前固件上行走写 API 可能返回 `127`；上肢固定动作、ASR、TTS 已在 Linux 真机用过。现场需要急停在手。
 
+## 上肢模仿 / 真机跟臂
+
+MediaPipe 跟臂与问答 Demo **分开**：模仿库左右是自拍镜像（人右手 → 机器人左臂），问答 `actions.json` 是机器人自己的左右。真机只走跑 811 + `rt/arm_sdk`。环境、肘零点换算、命令见 [docs/R1_imitate跟臂.md](docs/R1_imitate跟臂.md)，短命令表见 [imitate/README.md](imitate/README.md)。
+
+```bash
+PYTHONPATH=. .venv-r1/bin/python -m imitate --r1-camera --no-capture --full-model --hardware
+```
+
 ## Ubuntu 操作指南
 
 完整部署、代理配置、API key、连续上下文、ASR 异常和真机安全检查请参阅 [docs/Ubuntu操作指南.md](docs/Ubuntu操作指南.md)。

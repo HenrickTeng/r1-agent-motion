@@ -95,7 +95,17 @@ PYTHONPATH=. .venv-r1/bin/python -m r1_agent \
 - 行走前机器人必须处于固件 `FSM 811` 的 walk/run 模式；否则只测试上肢动作。
 - 真机测试时保持遥控器在手边，随时准备急停。
 
-## 7. 常见问题
+## 7. 上肢模仿跟臂
+
+语音问答不要和模仿跟臂混用动作名。跟臂文档：[R1_imitate跟臂.md](R1_imitate跟臂.md)。推荐命令：
+
+```bash
+PYTHONPATH=. .venv-r1/bin/python -m imitate --r1-camera --no-capture --full-model --hardware
+```
+
+须走跑 FSM 811、物理急停在手。软急停不要 Damp。
+
+## 8. 常见问题
 
 ### 模糊识别退化为固定提示
 
