@@ -1,10 +1,25 @@
 # R1 上肢动作模仿
 
-MediaPipe Pose → R1 10 个上肢关节。仿真用 MuJoCo；真机用走跑 **811** + `rt/arm_sdk`。
+MediaPipe Pose → R1 10 个上肢关节。仿真用 MuJoCo；真机用走跑 **811** + `rt/arm_sdk`。仓库总览见 [根 README](../README.md)。
+
+## 课程平台 / 只仿真
+
+不连机器人、不装 CycloneDDS。接入平台用这一段即可：
+
+```bash
+python3.12 -m venv .venv-r1
+.venv-r1/bin/pip install -e ".[imitate,dev]"
+PYTHONPATH=. .venv-r1/bin/python -m imitate --self-test
+PYTHONPATH=. .venv-r1/bin/python -m imitate --demo
+PYTHONPATH=. .venv-r1/bin/python -m imitate --view --full-model
+PYTHONPATH=. .venv-r1/bin/python -m imitate --camera 0 --full-model
+```
+
+自拍：**人的右手 → 机器人左臂（蓝）**。不要把模仿 JSON 写进 `actions.json`。
 
 **真机环境、安全、肘零点、左右约定**：请先读 [docs/R1_imitate跟臂.md](../docs/R1_imitate跟臂.md)。
 
-## 安装
+## 安装（含真机 DDS）
 
 ```bash
 python3.12 -m venv .venv-r1
