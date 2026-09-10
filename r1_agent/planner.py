@@ -20,6 +20,53 @@ def load_deepseek_key(path: Path | None = None) -> str:
         return ""
 
 
+def normalize_chat_url(url: str) -> str:
+    raw = (url or "").strip().rstrip("/")
+    if not raw:
+        return "https://api.deepseek.com/chat/completions"
+    if raw.endswith("/chat/completions"):
+        return raw
+    return raw + "/chat/completions"
+
+
+def load_deepseek_url() -> str:
+    return normalize_chat_url(os.getenv("DEEPSEEK_API_URL") or "")
+
+
+def load_deepseek_model() -> str:
+    return (os.getenv("DEEPSEEK_MODEL") or "deepseek-flash").strip()
+
+
+def extract_message_text(message: dict) -> str:
+    content = message.get("content")
+    if isinstance(content, str) and content.strip():
+        return content.strip()
+    if isinstance(content, list):
+        parts: list[str] = []
+        for item in content:
+            if isinstance(item, dict):
+                text = item.get("text")
+                if isinstance(text, str) and text.strip():
+                    parts.append(text.strip())
+        joined = "\n".join(parts).strip()
+        if joined:
+            return joined
+    reasoning = message.get("reasoning_content")
+    if isinstance(reasoning, str) and reasoning.strip():
+        return reasoning.strip()
+    return ""
+
+
+def chat_body(model: str, messages: list[dict], **extra) -> bytes:
+    payload = {
+        "model": model,
+        "messages": messages,
+        "thinking": {"type": "disabled"},
+        **extra,
+    }
+    return json.dumps(payload).encode()
+
+
 def _speech_action(catalog: Catalog, key: str) -> Action:
     text = catalog.speech[key]
     return Action(name=f"say:{key}", title=text, kind="speech", args={"text": text})
@@ -69,13 +116,15 @@ class DeepSeekPlanner:
         catalog: Catalog | None = None,
         *,
         context: str = "",
-        api_url: str = "https://api.deepseek.com/chat/completions",
-        model: str = "deepseek-chat",
+        api_url: str = "",
+        model: str = "",
+        api_key: str = "",
         timeout_s: float = 20,
     ) -> None:
         self.catalog = catalog or load_catalog()
-        self.api_url = api_url
-        self.model = model
+        self.api_url = normalize_chat_url(api_url or load_deepseek_url())
+        self.model = (model or load_deepseek_model()).strip()
+        self.api_key = (api_key or "").strip()
         self.timeout_s = timeout_s
         self.context = context.strip()
         self.fallback = RulePlanner(self.catalog)
@@ -91,7 +140,7 @@ class DeepSeekPlanner:
         self._turns = self._turns[-24:]
 
     def plan(self, text: str) -> tuple[str, list[Action]]:
-        api_key = load_deepseek_key()
+        api_key = self.api_key or load_deepseek_key()
         if not api_key:
             raise RuntimeError("DEEPSEEK_API_KEY is not set")
         names = [
@@ -132,13 +181,13 @@ class DeepSeekPlanner:
             system += "\n\n这是本次运行预先提供的上下文，请在整个对话中保持一致：\n" + self.context
             system += "\n\n这是本次运行预先提供的上下文，请在整个对话中保持一致：\n" + self.context
         messages = [{"role": "system", "content": system}, *self._turns, {"role": "user", "content": text}]
-        body = json.dumps({
-            "model": self.model,
-            "messages": messages,
-            "response_format": {"type": "json_object"},
-            "temperature": 0.1,
-            "max_tokens": 800,
-        }).encode()
+        body = chat_body(
+            self.model,
+            messages,
+            response_format={"type": "json_object"},
+            temperature=0.1,
+            max_tokens=800,
+        )
         req = request.Request(
             self.api_url,
             data=body,
@@ -148,7 +197,7 @@ class DeepSeekPlanner:
         try:
             with request.urlopen(req, timeout=self.timeout_s) as response:
                 envelope = json.loads(response.read())
-            payload = json.loads(envelope["choices"][0]["message"]["content"])
+            payload = json.loads(extract_message_text(envelope["choices"][0]["message"]))
         except (error.URLError, TimeoutError, KeyError, json.JSONDecodeError, IndexError, TypeError):
             reply, actions = self.fallback.plan(text)
             self._remember(text, reply, [action.name for action in actions])

@@ -105,7 +105,17 @@ PYTHONPATH=. .venv-r1/bin/python -m imitate --r1-camera --no-capture --full-mode
 
 须走跑 FSM 811、物理急停在手。软急停不要 Damp。
 
-## 8. 常见问题
+## 8. 教师课堂控制台
+
+本地网页：手势、键盘、失物识别、图形化编程，见 [教师控制台.md](教师控制台.md)。
+
+```bash
+PYTHONPATH=. .venv-r1/bin/python -m r1_studio --hardware
+```
+
+浏览器打开后，在画面下方再选笔记本摄像头或 R1 机载摄像头。
+
+## 9. 常见问题
 
 ### 模糊识别退化为固定提示
 

@@ -78,7 +78,7 @@ PYTHONPATH=. .venv-r1/bin/python -m imitate --r1-camera --no-capture --full-mode
 
 `--calibrate` 不要加 `--hardware`。图传偶发坏 JPEG 会跳过该帧、沿用上一帧；不要把损坏缓冲交给 OpenCV/MediaPipe（曾导致退出码 139）。
 
-跟臂限速（约 ×1.25 档，见 `r1_agent/arm_safety.py`）：肩俯仰/偏航约 37°/s，肩滚约 31°/s，肘约 41°/s，腕约 46°/s，腰约 18°/s。
+跟臂限速（约再 ×1.25 档，见 `r1_agent/arm_safety.py`）：肩俯仰/偏航约 46°/s，肩滚约 39°/s，肘约 51°/s，腕约 57°/s，腰约 22°/s。
 
 ## 6. 不要做的事
 

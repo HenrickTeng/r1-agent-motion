@@ -72,7 +72,7 @@ PYTHONPATH=. .venv-r1/bin/python -m imitate --camera 0 --full-model
 
 ## Ubuntu 操作指南
 
-完整部署、代理配置、API key、连续上下文、ASR 异常和真机安全检查请参阅 [docs/Ubuntu操作指南.md](docs/Ubuntu操作指南.md)。
+完整部署、代理配置、API key、连续上下文、ASR 异常和真机安全检查请参阅 [docs/Ubuntu操作指南.md](docs/Ubuntu操作指南.md)。教师课堂控制台（手势 / 键盘 / 失物识别 / 图形化编程）见 [docs/教师控制台.md](docs/教师控制台.md)。
 
 ## 本版本改进
 
@@ -83,4 +83,6 @@ PYTHONPATH=. .venv-r1/bin/python -m imitate --camera 0 --full-model
 - 增加步数规划提示：前进/后退支持 `1～10` 步，由移动原子动作组合。
 - 语音轮次以静音结束：开场播报「请说」，说完后约 3 秒没有新 ASR 包才提交，不会按固定时长截断。
 - 增加上肢动作模仿：`python -m imitate`，MuJoCo 仿真可单独上课程平台；真机跟臂走跑 811 + `rt/arm_sdk`。说明见 [imitate/README.md](imitate/README.md)。
+- 增加教师电脑本地控制台：`python -m r1_studio`。手势操作、键盘遥控、失物单帧识别、Scratch 风格方块编程（导出 `.r1prog.json`）。R1 不接入教学平台。见 [docs/教师控制台.md](docs/教师控制台.md)。
+- 分阶段探测：`python -m r1_studio --probe gestures --camera 0` 只打印手势 JSON；动作序列在仿真里编排：`python -m imitate --edit-sequence --full-model`。
 - 保留 `scripts/dds_robot_modified.py` 作为 ready-pose/绝对角度开发稿；默认入口仍是 `r1_agent/dds_robot.py`，避免未经验证的角度改造直接进入真机。

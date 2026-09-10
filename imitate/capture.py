@@ -212,6 +212,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--self-test", action="store_true", help="无摄像头自检")
     parser.add_argument("--view", action="store_true", help="打开 MuJoCo 窗口循环播放合成姿态")
     parser.add_argument("--demo", action="store_true", help="合成姿态键盘 demo")
+    parser.add_argument("--camera", type=int, default=-1, help="笔记本摄像头编号；默认 -1 表示无摄像头自检")
+    parser.add_argument(
+        "--edit-sequence",
+        action="store_true",
+        help="MuJoCo 里编排课堂动作序列（空格加入、P 播放、S 保存动作组）",
+    )
+    parser.add_argument(
+        "--play-sequence",
+        default="",
+        help="要播放或作为编辑起点的上肢动作名，逗号分隔，如 wave_right,cheer_both",
+    )
+    parser.add_argument("--save-as", default="", help="配合 --play-sequence 直接保存自定义动作组名字")
     parser.add_argument(
         "--r1-camera",
         action="store_true",
@@ -256,6 +268,15 @@ def main(argv: list[str] | None = None) -> int:
     if args.demo:
         run_demo_keys()
         return 0
+    if args.edit_sequence or args.play_sequence:
+        from imitate.sequence import run_edit_sequence
+
+        return run_edit_sequence(
+            full_model=args.full_model,
+            play=args.play_sequence,
+            save_as=args.save_as,
+            headless=args.no_mujoco,
+        )
     if args.read_lowstate:
         from imitate.read_lowstate import run_read_lowstate
 

@@ -4,21 +4,26 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "r1-agent-motion"
-version = "0.3.0"
-description = "Minimal Unitree R1 agent skill demo: named actions over Ethernet DDS"
+version = "0.4.0"
+description = "Unitree R1 classroom agent: named actions, imitate, teacher studio"
 requires-python = ">=3.11"
 dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=8.3,<9"]
 imitate = ["mujoco>=3.2", "numpy", "opencv-python", "mediapipe>=0.10"]
+studio = ["numpy", "opencv-python", "mediapipe>=0.10"]
 
 [project.scripts]
 r1-agent = "r1_agent.cli:main"
+r1-studio = "r1_studio.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["r1_agent*", "imitate"]
+include = ["r1_agent*", "imitate", "r1_studio*"]
 exclude = ["imitate.library*", "imitate.mirror_library*"]
+
+[tool.setuptools.package-data]
+r1_studio = ["static/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

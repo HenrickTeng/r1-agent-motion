@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import threading
 import time
 
 from r1_agent.asr import select_transcript
@@ -91,6 +92,14 @@ MOTIONS: dict[str, list[tuple[float, tuple[float, ...], float]]] = {
     "hands_forward": [(2.0, _deg(LSP=-0.30, RSP=-0.30, LE=0.22, RE=0.22), 0.7)],
     "ready_pose": [(1.2, _deg(), 0.2)],
     "small_cheer": [(1.8, _deg(LSP=-0.42, RSP=-0.42, LE=0.32, RE=0.32), 0.5)],
+    "cheer_both": [
+        # 举起（比原来水平再往上很多），两手肩偏航差约 10°，前后交替晃
+        (1.8, _deg(LSP=-0.78, RSP=-0.78, LSR=0.16, RSR=-0.16, LSY=0.10, RSY=-0.10, LE=0.08, RE=0.08), 0.06),
+        (0.32, _deg(LSP=-0.78, RSP=-0.78, LSR=0.16, RSR=-0.16, LSY=-0.10, RSY=0.10, LE=0.08, RE=0.08, LWR=0.25, RWR=-0.25), 0.04),
+        (0.32, _deg(LSP=-0.78, RSP=-0.78, LSR=0.16, RSR=-0.16, LSY=0.10, RSY=-0.10, LE=0.08, RE=0.08, LWR=-0.25, RWR=0.25), 0.04),
+        (0.32, _deg(LSP=-0.78, RSP=-0.78, LSR=0.16, RSR=-0.16, LSY=-0.10, RSY=0.10, LE=0.08, RE=0.08, LWR=0.25, RWR=-0.25), 0.04),
+        (0.32, _deg(LSP=-0.78, RSP=-0.78, LSR=0.16, RSR=-0.16, LSY=0.10, RSY=-0.10, LE=0.08, RE=0.08, LWR=-0.25, RWR=0.25), 0.18),
+    ],
     "dual_arm_gesture": [(1.6, _deg(LSP=0.40, RSP=-0.40), 0.4), (1.2, _deg(LSP=0.40, RSP=-0.40, LWR=0.72, RWR=-0.72), 0.6)],
     "clap": [
         (1.4, _deg(LSP=-0.24, RSP=-0.24, LSR=0.14, RSR=-0.14, LE=0.45, RE=0.45), 0.1),
@@ -118,8 +127,8 @@ LOCO = {
     "move_forward_long": (0.5, 0.0, 0.0, 1.0),
     "move_backward_slow": (-0.5, 0.0, 0.0, 0.5),
     "move_backward_long": (-0.5, 0.0, 0.0, 1.0),
-    "move_left_slow": (0.0, 0.2, 0.0, 1.0),
-    "move_right_slow": (0.0, -0.2, 0.0, 1.0),
+    "move_left_slow": (0.0, 0.5, 0.0, 1.0),
+    "move_right_slow": (0.0, -0.5, 0.0, 1.0),
     "turn_left_10": (0.0, 0.0, 1.0, 0.2),
     "turn_right_10": (0.0, 0.0, -1.0, 0.2),
     "turn_left_20": (0.0, 0.0, 1.0, 0.35),
@@ -136,6 +145,20 @@ def _loco_issued(code: int | None) -> bool:
     return code in (0, 127, None)
 
 
+# 固件可行走族：811 走跑；816 是 arm_sdk 接管后的 ArmSdkLoco，不是“没进走跑”。
+WALK_FSMS = frozenset({811, 812, 813, 814, 815, 816, 830, 831})
+FSM_NAMES = {
+    0: "ZeroTorque",
+    1: "Damping",
+    4: "Lock",
+    811: "Run",
+    814: "Walk",
+    816: "ArmSdkLoco",
+    830: "Loco20Dof",
+    831: "LocoArmSdk",
+}
+
+
 def _blend(x: float) -> float:
     return 10 * x**3 - 15 * x**4 + 6 * x**5
 
@@ -146,11 +169,9 @@ class DdsRobot:
 
         prepare_cyclonedds()
         from unitree_sdk2py.core.channel import ChannelFactoryInitialize, ChannelPublisher, ChannelSubscriber
-        from unitree_sdk2py.g1.audio.g1_audio_client import AudioClient
         from unitree_sdk2py.idl.default import unitree_hg_msg_dds__LowCmd_
         from unitree_sdk2py.idl.std_msgs.msg.dds_ import String_
         from unitree_sdk2py.idl.unitree_hg.msg.dds_ import LowCmd_, LowState_
-        from unitree_sdk2py.r1.loco.r1_loco_client import LocoClient
         from unitree_sdk2py.utils.crc import CRC
 
         from r1_agent.interface import resolve_interface
@@ -161,6 +182,11 @@ class DdsRobot:
         self._audio_lines: list[str] = []
         self._cmd = unitree_hg_msg_dds__LowCmd_()
         self._crc = CRC()
+        self._tts = None
+        self._loco = None
+        self._init_lock = threading.Lock()
+        t0 = time.time()
+        print(f"DDS 网卡 {self._interface}，等待 rt/lowstate…", flush=True)
         self._lowstate = ChannelSubscriber("rt/lowstate", LowState_)
         self._lowstate.Init(self._on_lowstate, 10)
         deadline = time.time() + 5
@@ -168,21 +194,47 @@ class DdsRobot:
             time.sleep(0.05)
         if self._state is None:
             raise RuntimeError("rt/lowstate timed out on " + self._interface)
+        print(f"rt/lowstate 已到（{time.time() - t0:.1f}s）", flush=True)
         self._arm = ChannelPublisher("rt/arm_sdk", LowCmd_)
         self._arm.Init()
         self._asr = ChannelSubscriber("rt/audio_msg", String_)
         self._asr.Init(self._on_audio, 10)
-        self._tts = AudioClient()
-        self._tts.SetTimeout(10.0)
-        self._tts.Init()
-        self._loco = LocoClient()
-        self._loco.SetTimeout(10.0)
-        self._loco.Init()
         self._q_cmd = self._pose()
         self._estop = False
+        self._loco_lock = threading.Lock()
+        self._fsm_cache: tuple[int | None, float] = (None, 0.0)
+        self._moving = False
 
     def _on_lowstate(self, msg) -> None:
         self._state = msg
+
+    def _ensure_tts(self):
+        with self._init_lock:
+            if self._tts is not None:
+                return
+            from unitree_sdk2py.g1.audio.g1_audio_client import AudioClient
+
+            t0 = time.time()
+            print("正在初始化语音客户端…", flush=True)
+            tts = AudioClient()
+            tts.SetTimeout(5.0)
+            tts.Init()
+            self._tts = tts
+            print(f"语音客户端就绪 {time.time() - t0:.1f}s", flush=True)
+
+    def _ensure_loco(self):
+        with self._init_lock:
+            if self._loco is not None:
+                return
+            from unitree_sdk2py.r1.loco.r1_loco_client import LocoClient
+
+            t0 = time.time()
+            print("正在初始化行走客户端…", flush=True)
+            loco = LocoClient()
+            loco.SetTimeout(2.0)
+            loco.Init()
+            self._loco = loco
+            print(f"行走客户端就绪 {time.time() - t0:.1f}s", flush=True)
 
     def _on_audio(self, msg) -> None:
         raw = getattr(msg, "data", "")
@@ -249,6 +301,7 @@ class DdsRobot:
             time.sleep(0.01)
 
     def speak(self, text: str) -> None:
+        self._ensure_tts()
         code = self._tts.TtsMaker(text, 0)
         if code != 0:
             raise RuntimeError(f"TTS failed with code {code}")
@@ -310,25 +363,44 @@ class DdsRobot:
                 self._release()
             raise
 
-    def _fsm_id(self) -> int | None:
+    def _fsm_id(self, *, block: bool = True) -> int | None:
+        now = time.time()
+        cached, stamp = self._fsm_cache
+        ttl = 1.5 if block else 60.0
+        if cached is not None and now - stamp < ttl:
+            return cached
+        if not block:
+            return cached
+        self._ensure_loco()
         from unitree_sdk2py.r1.loco.r1_loco_api import ROBOT_API_ID_LOCO_GET_FSM_ID
         code, data = self._loco._Call(ROBOT_API_ID_LOCO_GET_FSM_ID, "{}")
         if code != 0 or data in (None, ""):
-            return None
+            return cached
         try:
             payload = json.loads(data) if isinstance(data, str) else data
-            return int(payload["data"])
+            fsm = int(payload["data"])
         except (json.JSONDecodeError, TypeError, KeyError, ValueError):
-            return None
+            return cached
+        self._fsm_cache = (fsm, now)
+        return fsm
+
+    def _need_walk(self, fsm: int | None) -> None:
+        if fsm is None or fsm in WALK_FSMS:
+            return
+        name = FSM_NAMES.get(fsm, "未知")
+        raise RuntimeError(
+            f"loco fsm_id={fsm}（{name}），不能 SetVelocity。"
+            "先站稳，遥控器 R2+A 进走跑。不要软件 Start()/Damp。"
+        )
 
     def require_walk_run(self) -> int:
         """走跑模式 fsm 811。只查询，不 SetFsmId。"""
         fsm = self._fsm_id()
-        if fsm != 811:
+        if fsm != 811 and fsm not in WALK_FSMS:
             raise RuntimeError(
-                f"当前 fsm_id={fsm}，需要走跑 811。保持走跑站稳，不要进调试，不要 Damp。"
+                f"当前 fsm_id={fsm}，需要走跑（811 或 ArmSdkLoco 816）。保持站稳，不要进调试，不要 Damp。"
             )
-        return fsm
+        return fsm if fsm is not None else -1
 
     def move(self, action: Action | str) -> None:
         name = action if isinstance(action, str) else action.name
@@ -337,27 +409,54 @@ class DdsRobot:
             raise RuntimeError(f"unknown loco action: {name}")
         vx, vy, omega, duration = command
         if duration <= 0:
-            stop = self._loco.StopMove()
+            with self._loco_lock:
+                stop = self._loco.StopMove()
+                self._moving = False
             if not _loco_issued(stop):
                 raise RuntimeError(f"StopMove failed with code {stop}")
             return
-        fsm = self._fsm_id()
-        if fsm is not None and fsm != 811:
-            raise RuntimeError(
-                f"loco fsm_id={fsm}, need 811 walk/run mode. "
-                "Stand the robot, then press R2+A on the remote before walking."
-            )
-        code = self._loco.SetVelocity(vx, vy, omega, duration)
-        if not _loco_issued(code):
-            self._loco.StopMove()
-            raise RuntimeError(f"SetVelocity failed with code {code} fsm_id={fsm}")
-        time.sleep(duration)
-        stop = self._loco.StopMove()
-        if not _loco_issued(stop):
-            raise RuntimeError(f"StopMove failed with code {stop}")
+        fsm = self._fsm_id(block=False)
+        self._need_walk(fsm)
+        self.drive(vx, vy, omega, duration)
+        if duration > 0:
+            time.sleep(duration)
 
     def turn(self, action: Action) -> None:
         self.move(action)
+
+    def drive(self, vx: float, vy: float, omega: float, duration: float = 0.25) -> None:
+        """键盘/手势遥控：短时速度。松开必须 StopMove；本函数不 sleep。"""
+        if self._estop:
+            raise RuntimeError("soft estop: motion blocked")
+        vx = max(-0.5, min(0.5, float(vx)))
+        vy = max(-0.5, min(0.5, float(vy)))
+        omega = max(-1.0, min(1.0, float(omega)))
+        if abs(vx) + abs(vy) + abs(omega) < 1e-3:
+            if self._loco is None:
+                return
+            with self._loco_lock:
+                self._stop_locked()
+            return
+        self._ensure_loco()
+        fsm = self._fsm_id(block=False)
+        self._need_walk(fsm)
+        with self._loco_lock:
+            code = self._loco.SetVelocity(vx, vy, omega, max(0.5, float(duration)))
+            if not _loco_issued(code):
+                self._loco.StopMove()
+                self._moving = False
+                raise RuntimeError(f"SetVelocity failed with code {code} fsm_id={fsm}")
+            self._moving = True
+
+    def _stop_locked(self) -> None:
+        if self._loco is None:
+            self._moving = False
+            return
+        try:
+            self._loco.StopMove()
+        except Exception:
+            pass
+        self._moving = False
 
     def track_arm(self, arm_rad: dict[str, float], dt: float) -> None:
         """实时跟臂：10 个上肢关节，腰/头保持待机。已急停则只维持当前指令。"""
@@ -400,10 +499,8 @@ class DdsRobot:
     def soft_estop(self) -> None:
         """软急停：停步 + 锁住当前上肢指令。不进 Damp，以免摔倒。"""
         self._estop = True
-        try:
-            self._loco.StopMove()
-        except Exception:
-            pass
+        with self._loco_lock:
+            self._stop_locked()
         self._q_cmd = self._pose()
         self._publish(self._q_cmd, 1.0)
 
@@ -412,10 +509,12 @@ class DdsRobot:
         self._q_cmd = self._pose()
 
     def stop(self) -> None:
+        if not self._loco_lock.acquire(timeout=0.2):
+            return
         try:
-            self._loco.StopMove()
-        except Exception:
-            pass
-        if self._state is not None:
-            self._q_cmd = self._pose()
-            self._publish(self._q_cmd, 1.0)
+            self._stop_locked()
+            if self._state is not None:
+                self._q_cmd = self._pose()
+                self._publish(self._q_cmd, 1.0)
+        finally:
+            self._loco_lock.release()

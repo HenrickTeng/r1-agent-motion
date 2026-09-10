@@ -23,3 +23,6 @@ r1-motion.sqlite3
 imitate/library/*.json
 imitate/assets/*.task
 imitate/assets/calibration.json
+r1_studio/assets/*.task
+r1_studio/assets/*.tflite
+programs/custom_groups.json

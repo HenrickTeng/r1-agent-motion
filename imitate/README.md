@@ -48,6 +48,15 @@ PYTHONPATH=. .venv-r1/bin/python -m imitate --camera 0 --full-model
 
 无显示器可用 `--demo`。`--view --full-model` 循环播放老师姿势（仿真肘零点 ≠ 真机编码器）。
 
+课堂动作序列（`actions.json` / `MOTIONS`）在仿真里编排：
+
+```bash
+PYTHONPATH=. .venv-r1/bin/python -m imitate --edit-sequence --full-model
+PYTHONPATH=. .venv-r1/bin/python -m imitate --play-sequence wave_right,cheer_both --full-model
+```
+
+`[` `]` 切换原子，空格加入，`P` 播放，`S` 存成自定义动作组。不要把模仿 JSON 写进 `actions.json`。
+
 ## 真机
 
 物理急停在手。软急停 E/空格，恢复 R，退出 Q。不要走路、不要调试、不要 Damp。

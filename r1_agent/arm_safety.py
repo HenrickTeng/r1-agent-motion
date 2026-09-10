@@ -8,21 +8,21 @@
 from __future__ import annotations
 
 # 与 dds_robot.JOINTS 同序 13 轴：双臂 10 + 腰偏航 + 头俯仰 + 头偏航
-# 单位 rad/s。跟臂略加一档（×1.25，肩俯仰约 36°/s）。
+# 单位 rad/s。跟臂再加一档（×1.25，肩俯仰约 46°/s）。
 MAX_SPEED_RAD_S: tuple[float, ...] = (
-    0.64,  # left_shoulder_pitch   ~37°/s
-    0.54,  # left_shoulder_roll    ~31°/s
-    0.64,  # left_shoulder_yaw
-    0.71,  # left_elbow            ~41°/s
-    0.80,  # left_wrist_roll
-    0.64,  # right_shoulder_pitch
-    0.54,  # right_shoulder_roll
-    0.64,  # right_shoulder_yaw
-    0.71,  # right_elbow
-    0.80,  # right_wrist_roll
-    0.31,  # waist_yaw             ~18°/s
-    0.39,  # head_pitch
-    0.47,  # head_yaw
+    0.80,  # left_shoulder_pitch   ~46°/s
+    0.68,  # left_shoulder_roll    ~39°/s
+    0.80,  # left_shoulder_yaw
+    0.89,  # left_elbow            ~51°/s
+    1.00,  # left_wrist_roll       ~57°/s
+    0.80,  # right_shoulder_pitch
+    0.68,  # right_shoulder_roll
+    0.80,  # right_shoulder_yaw
+    0.89,  # right_elbow
+    1.00,  # right_wrist_roll
+    0.39,  # waist_yaw             ~22°/s
+    0.49,  # head_pitch
+    0.59,  # head_yaw
 )
 
 DT_S = 0.01
