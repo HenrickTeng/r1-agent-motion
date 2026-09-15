@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>R1 教师课堂控制台</title>
+  <link rel="stylesheet" href="/static/app.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="logo">R1</span>
+      <div>
+        <strong>教师课堂控制台</strong>
+        <small>本地连接机器人 · 不接入教学平台</small>
+      </div>
+    </div>
+    <nav>
+      <button data-tab="teleop" class="active">键盘遥控</button>
+      <button data-tab="gesture">手势操作</button>
+      <button data-tab="vision">校园识别</button>
+      <button data-tab="blocks">图形化编程</button>
+    </nav>
+    <div class="safety">
+      <button id="estop" class="danger">软急停</button>
+      <button id="clear-estop" class="ghost">恢复</button>
+    </div>
+  </header>
+
+  <main>
+    <p id="arm-banner" class="arm-banner">当前没有开启课堂功能。点选项卡后，再点「开始」才会向 R1 发指令。</p>
+    <section class="hero">
+      <div class="video-card">
+        <img id="preview" alt="摄像头预览" src="/video.mjpg" />
+        <aside id="recog" class="recog hidden" aria-live="polite">
+          <p class="kicker">识别结果</p>
+          <p id="recog-label">—</p>
+          <p id="recog-poses">手：无</p>
+          <p id="recog-twist"><code>vx 0.00　vy 0.00　ω 0.00</code></p>
+          <p id="recog-kind">未开启</p>
+          <p id="recog-operator">操控者：—</p>
+        </aside>
+        <p id="speed-line" class="cap">速度 <code id="cam-twist">vx 0.00　vy 0.00　ω 0.00</code></p>
+        <p id="camera-label" class="cap">尚未选择摄像头，请点下面按钮</p>
+        <div class="cam-src">
+          <button type="button" id="cam-laptop" class="ghost">笔记本摄像头（镜像）</button>
+          <button type="button" id="cam-r1" class="ghost">R1 机载摄像头</button>
+        </div>
+      </div>
+      <section id="panel-teleop" class="panel hidden">
+        <h2>键盘遥控</h2>
+        <p class="hint">点「开始」后请<strong>再点一下 QWEASD 任一格子</strong>，浏览器才会接收键盘（切走网页再切回来，也是为了重新点进这一页）。不要点在下面课堂助手的打字框里。W/S 前后，A/D 横移，Q/E 转向。空格停下。</p>
+        <p>
+          <button type="button" id="start-teleop">开始键盘遥控</button>
+          <button type="button" id="stop-teleop" class="ghost">结束键盘遥控</button>
+        </p>
+        <p id="teleop-status" class="arm-banner">未开始：按键不会发给机器人。</p>
+        <div class="pad">
+          <div>
+            <div class="keys" id="teleop-keys" tabindex="0">
+              <kbd data-key="q">Q</kbd><kbd data-key="w">W</kbd><kbd data-key="e">E</kbd>
+              <kbd data-key="a">A</kbd><kbd data-key="s">S</kbd><kbd data-key="d">D</kbd>
+            </div>
+            <p class="key-legend">Q 左转　W 前进　E 右转<br />A 左移　S 后退　D 右移</p>
+          </div>
+          <div>
+            <p>当前速度 <code id="twist">0, 0, 0</code></p>
+            <div id="presets" class="preset-grid"></div>
+          </div>
+        </div>
+      </section>
+      <section id="panel-gesture" class="panel hidden">
+        <h2>手势操作</h2>
+        <p>
+          <button type="button" id="start-gesture">开始手势</button>
+          <button type="button" id="stop-gesture" class="ghost">结束手势</button>
+        </p>
+        <p>当前：<strong id="gesture-label">手势未开启</strong></p>
+        <aside id="gesture-sheet" class="gesture-sheet">
+          <p class="kicker" id="gesture-sheet-title">笔记本摄像头手势</p>
+          <ol id="gesture-list-laptop" class="gesture-list">
+            <li data-pose="palm">单手张开手掌：左右横移（你的左 = 机器人往你左边走）</li>
+            <li data-pose="palms">双手张开：分开飞远（后退），合拢飞近（前进）</li>
+            <li data-pose="point">食指左右指：朝你指的那一侧转</li>
+            <li data-pose="fist">握拳：停下</li>
+            <li data-pose="peace">比耶保持约 0.35 秒：举起双手欢呼</li>
+          </ol>
+          <ol id="gesture-list-r1" class="gesture-list hidden">
+            <li data-pose="tpose">先侧平举（或双手上举）锁定操控者</li>
+            <li data-pose="left_out">单臂侧举：横移（你的左 = 机器人往你左边走）</li>
+            <li data-pose="right_out">另一侧单臂侧举：往另一边横移</li>
+            <li data-pose="hands_in">侧平举后再分开：后退；收拢：前进</li>
+            <li data-pose="both_down">双臂下垂：停下</li>
+            <li data-pose="both_up">双手举过头顶保持约 0.4 秒：欢呼</li>
+          </ol>
+          <p class="hint">换笔记本 / 机载摄像头会自动换成对应列表。认到的动作会高亮。须再点「开始」才发给 R1。</p>
+        </aside>
+      </section>
+      <section id="panel-vision" class="panel hidden">
+        <h2>校园识别</h2>
+        <p>
+          <button type="button" id="start-vision">开始校园识别</button>
+          <button type="button" id="stop-vision" class="ghost">结束校园识别</button>
+        </p>
+        <div id="vision-chat" class="chat"></div>
+        <div class="talk">
+          <input id="vision-question" placeholder="这本书该放在哪里？" />
+          <button type="button" id="capture-vision">看一眼并回答</button>
+        </div>
+        <ul id="vision-items"></ul>
+        <p class="hint">先点开始，把物品放进镜头再提问。图书馆平面等设置在页面最下方折叠栏。</p>
+      </section>
+    </section>
+
+    <div class="status-card">
+      <p class="kicker">课堂助手说</p>
+      <p id="reply">教师控制台已就绪。</p>
+      <p id="error" class="err"></p>
+      <div class="chips">
+        <span id="mode-chip">未开启</span>
+        <span id="hw-chip">仿真</span>
+        <span id="busy-chip">空闲</span>
+      </div>
+      <div class="talk">
+        <input id="utterance" placeholder="打字给机器人，或问「这本书该放在哪里」" />
+        <button id="send-text">发送</button>
+        <button id="listen" class="ghost">听一轮</button>
+      </div>
+    </div>
+
+    <section id="panel-blocks" class="panel hidden">
+      <h2>小朋友图形化编程（教师电脑本地）</h2>
+      <p class="hint">从左边点方块排程序。先点「开始图形化」再运行，才会发给 R1。</p>
+      <p>
+        <button type="button" id="start-blocks">开始图形化</button>
+        <button type="button" id="stop-blocks" class="ghost">结束图形化</button>
+      </p>
+      <div class="blocks-layout">
+        <aside id="toolbox"></aside>
+        <div class="workspace">
+          <div class="toolbar">
+            <input id="prog-name" value="我的第一个程序" />
+            <input id="prog-author" value="同学" />
+            <button id="run-prog">运行</button>
+            <button id="check-prog" class="ghost">检查</button>
+            <button id="inspect-prog" class="ghost">看整段命令</button>
+            <button id="save-prog" class="ghost">下载文件</button>
+            <label class="ghost file">打开<input id="load-prog" type="file" accept=".json,.r1prog.json" /></label>
+          </div>
+          <ol id="stack"></ol>
+          <div class="custom-box">
+            <h3>录制自定义动作组</h3>
+            <input id="group-name" placeholder="例如：超级欢迎" />
+            <p class="hint">先在程序里排好要包含的原子动作，再点保存。之后工具箱会出现这个方块。</p>
+            <button id="save-group">把当前程序存成动作组</button>
+            <div id="my-groups"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <details id="campus-api" class="panel hidden">
+      <summary>DeepSeek / 校园背景设置（点这里展开）</summary>
+      <p class="hint">默认模型 <code>deepseek-flash</code>（V4.1 多模态）。密钥只留在本机进程，不写入仓库。勾选图书馆平面后按馆藏指路；不勾选则只说类型和寻找方向。</p>
+      <label class="field">API Key<input id="llm-key" type="password" autocomplete="off" placeholder="粘贴后点保存，不会写入仓库" /></label>
+      <label class="field">接口地址<input id="llm-url" placeholder="https://api.deepseek.com/chat/completions 或公司网关 /v1" /></label>
+      <label class="field">模型名<input id="llm-model" placeholder="deepseek-flash" /></label>
+      <label class="check"><input type="checkbox" id="library-on" /> 加载示例图书馆平面（一楼文学、二楼理科、三楼教材）</label>
+      <label class="field">本校补充背景（可选）<textarea id="campus-extra" rows="4" placeholder="例如：三年级教室在 A 栋 2 楼；也可粘贴更细的馆藏。"></textarea></label>
+      <p><button type="button" id="save-campus" class="ghost">保存接口和校园背景</button></p>
+    </details>
+  </main>
+
+  <div id="inspect-mask" class="confirm-mask hidden" role="dialog" aria-modal="true">
+    <div class="confirm-card inspect-card">
+      <h3 id="inspect-title">这一块发给 R1 的命令</h3>
+      <p class="hint" id="inspect-heading"></p>
+      <ol id="inspect-steps"></ol>
+      <pre id="inspect-text"></pre>
+      <p class="confirm-warn">这只是预览，点「看命令」不会让机器人动。真要执行请先「开始图形化」再点运行。</p>
+      <div class="confirm-actions">
+        <button type="button" id="inspect-close">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="confirm-mask" class="confirm-mask hidden" role="dialog" aria-modal="true">
+    <div class="confirm-card">
+      <h3 id="confirm-title">请确认</h3>
+      <p id="confirm-body"></p>
+      <p class="confirm-warn">安全提醒：已经发给机器人的指令无法从网页撤回。软急停只停后续下发；正在走的步态请立刻按遥控器急停。</p>
+      <div class="confirm-actions">
+        <button type="button" id="confirm-yes">确定</button>
+        <button type="button" id="confirm-no" class="ghost">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    教师电脑本地控制 · 物理急停优先 · 不要把 R1 接到教学平台公网
+  </footer>
+  <script src="/static/app.js"></script>
+</body>
+</html>

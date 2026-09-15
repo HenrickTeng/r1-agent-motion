@@ -1,0 +1,12 @@
+{
+  "schema": "r1-student-program/v1",
+  "name": "欢迎仪式",
+  "author": "示例",
+  "blocks": [
+    {"type": "say", "text": "同学们好，我是 R1。"},
+    {"type": "group", "name": "欢迎"},
+    {"type": "wait", "seconds": 1},
+    {"type": "move", "name": "move_forward_slow", "repeat": 1},
+    {"type": "action", "name": "cheer_both"}
+  ]
+}
