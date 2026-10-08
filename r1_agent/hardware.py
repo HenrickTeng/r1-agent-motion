@@ -55,6 +55,12 @@ class DeferredHardware:
     def drive(self, vx: float, vy: float, omega: float, duration: float = 0.4) -> None:
         self._use().drive(vx, vy, omega, duration)
 
+    def track_arm(self, arm_rad: dict, dt: float) -> None:
+        self._use().track_arm(arm_rad, dt)
+
+    def goto_ready(self, seconds: float = 3.0) -> None:
+        self._use().goto_ready(seconds)
+
     def soft_estop(self) -> None:
         self._use().soft_estop()
 
@@ -86,6 +92,12 @@ class R1Hardware:
 
     def drive(self, vx: float, vy: float, omega: float, duration: float = 0.4) -> None:
         self.robot.drive(vx, vy, omega, duration)
+
+    def track_arm(self, arm_rad: dict, dt: float) -> None:
+        self.robot.track_arm(arm_rad, dt)
+
+    def goto_ready(self, seconds: float = 3.0) -> None:
+        self.robot.goto_ready(seconds)
 
     def soft_estop(self) -> None:
         self.robot.soft_estop()

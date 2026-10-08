@@ -17,7 +17,14 @@ const FEATURE_NAMES = {
   gesture: "手势操作",
   vision: "校园识别",
   blocks: "图形化编程",
+  agent: "语音问答",
+  greet: "近距迎宾",
+  imitate: "动作模仿",
+  wrestle: "扳手腕",
 };
+
+const WRESTLE_HINT =
+  "扳手腕要进调试模式。调试结束后必须给 R1 关机再开机、确认走跑，再点「已重新开机」。网页不能替你开机。";
 
 const CAM_NAMES = {
   laptop: "笔记本摄像头",
@@ -54,6 +61,21 @@ function paintState(data, light = false) {
   }
   paintGestureSheet(data);
   $("gesture-label").textContent = data.gesture || "";
+  if ($("imitate-label")) $("imitate-label").textContent = data.imitate || "";
+  if ($("greet-label")) $("greet-label").textContent = data.greet || "";
+  if (data.greet_detail) {
+    const g = data.greet_detail;
+    if ($("greet-dist")) {
+      $("greet-dist").textContent = g.distance_m == null ? "—" : Number(g.distance_m).toFixed(2) + " m";
+    }
+    if ($("greet-zone")) $("greet-zone").textContent = g.zone || "unknown";
+    if ($("greet-source")) $("greet-source").textContent = g.source || "—";
+  }
+  if ($("wrestle-status")) {
+    $("wrestle-status").textContent = data.r1_needs_reboot
+      ? "当前：已离开走跑。回来前请给 R1 重新开机，再点「已重新开机」。"
+      : "当前：仍可使用教师操作台（走跑）。";
+  }
   const detail = data.gesture_detail;
   if (detail) {
     $("recog-label").textContent = detail.label || data.gesture || "—";
@@ -373,10 +395,10 @@ async function inspectBlocks(index) {
 function showTab(name) {
   state.tab = name;
   document.querySelectorAll("nav button").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
-  ["teleop", "gesture", "vision", "blocks"].forEach((id) => {
+  ["teleop", "gesture", "vision", "blocks", "agent", "greet", "imitate", "wrestle"].forEach((id) => {
     $("panel-" + id).classList.toggle("hidden", id !== name);
   });
-  if ($("recog")) $("recog").classList.toggle("hidden", name !== "gesture");
+  if ($("recog")) $("recog").classList.toggle("hidden", name !== "gesture" && name !== "greet");
   if ($("speed-line")) $("speed-line").classList.toggle("hidden", name === "gesture");
   if ($("campus-api")) $("campus-api").classList.toggle("hidden", name !== "vision");
 }
@@ -423,6 +445,21 @@ async function noticeStopped(name) {
   });
 }
 
+async function ensureWalkRunReady() {
+  const data = await api("/api/state");
+  paintState(data, true);
+  if (!data.r1_needs_reboot) return true;
+  const go = await confirmChoice({
+    title: "请先给 R1 重新开机",
+    body: WRESTLE_HINT,
+    yes: "已经重新开机，继续",
+    no: "还没开机，留在本页",
+  });
+  if (!go) return false;
+  paintState(await api("/api/wrestle/cleared", {}));
+  return true;
+}
+
 async function startFeature(name) {
   if (state.switching) return;
   if (state.armed === name) {
@@ -431,6 +468,17 @@ async function startFeature(name) {
   }
   state.switching = true;
   try {
+    if (name === "wrestle") {
+      const go = await confirmChoice({
+        title: "离开教师走跑，去扳手腕？",
+        body: WRESTLE_HINT + "本页不会替你切调试，也不会在调试里发走跑步态。",
+        yes: "停掉教师台并离开走跑",
+        no: "取消",
+      });
+      if (!go) return;
+    } else if (!(await ensureWalkRunReady())) {
+      return;
+    }
     if (state.armed) {
       const from = FEATURE_NAMES[state.armed];
       await stopSending();
@@ -545,6 +593,25 @@ $("start-vision").onclick = () => startFeature("vision");
 $("stop-vision").onclick = () => stopFeature();
 $("start-blocks").onclick = () => startFeature("blocks");
 $("stop-blocks").onclick = () => stopFeature();
+$("start-agent").onclick = () => startFeature("agent");
+$("stop-agent").onclick = () => stopFeature();
+$("start-greet").onclick = () => startFeature("greet");
+$("stop-greet").onclick = () => stopFeature();
+$("start-imitate").onclick = () => startFeature("imitate");
+$("stop-imitate").onclick = () => stopFeature();
+$("start-wrestle").onclick = () => startFeature("wrestle");
+$("clear-wrestle").onclick = async () => {
+  const go = await confirmChoice({
+    title: "确认 R1 已经重新开机？",
+    body: "请确认已经关机再开机，并且机器人站稳走跑。点确定后才能再开键盘、手势、语音或跟臂。",
+    yes: "已重新开机",
+    no: "还没有",
+  });
+  if (!go) return;
+  state.armed = null;
+  paintState(await api("/api/wrestle/cleared", {}));
+  await api("/api/mode", { mode: "idle" });
+};
 $("cam-laptop").onclick = () => requestCamera("laptop");
 $("cam-r1").onclick = () => requestCamera("r1");
 $("capture-vision").onclick = async () => {

@@ -187,6 +187,10 @@ class PoseTracker:
         self._mp = mp
 
     def detect_bgr(self, frame) -> list[Any] | None:
+        image, _world = self.detect_pair(frame)
+        return image
+
+    def detect_pair(self, frame) -> tuple[list[Any] | None, list[Any] | None]:
         import cv2
         import numpy as np
 
@@ -197,9 +201,10 @@ class PoseTracker:
         image = self._mp.Image(image_format=self._mp.ImageFormat.SRGB, data=rgb)
         result = self._landmarker.detect(image)
         poses = result.pose_landmarks or []
-        if not poses:
-            return None
-        return list(poses[0])
+        worlds = result.pose_world_landmarks or []
+        image_lm = list(poses[0]) if poses else None
+        world_lm = list(worlds[0]) if worlds else None
+        return image_lm, world_lm
 
 
 def overlay_pose(frame, landmarks: list | None, label: str, box=None):

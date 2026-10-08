@@ -36,6 +36,8 @@ class StudioHandler(BaseHTTPRequestHandler):
             return self._json(200, self.session.state())
         if path == "/api/catalog":
             return self._json(200, self.session.catalog_payload())
+        if path == "/api/depth":
+            return self._json(200, self.session.debug_stereo())
         self.send_error(404)
 
     def do_POST(self) -> None:  # noqa: N802
@@ -110,6 +112,8 @@ class StudioHandler(BaseHTTPRequestHandler):
                 )
             if path == "/api/groups/delete":
                 return self._json(200, self.session.delete_group(str(payload.get("name") or "")))
+            if path == "/api/wrestle/cleared":
+                return self._json(200, self.session.clear_wrestle_reboot())
         except Exception as error:
             return self._json(400, {"ok": False, "error": str(error)})
         self.send_error(404)

@@ -333,33 +333,50 @@ def test_studio_starts_without_camera_until_chosen(tmp_path):
     assert "机载" in session.last_reply
 
 
-def test_set_mode_teleop_does_not_wait_for_stop(tmp_path):
-    import threading
-    import time
-
+def test_set_mode_shuts_down_previous_backend(tmp_path):
     from r1_agent.executor import SimulatedBackend
     from r1_studio.camera import FrameSource
     from r1_studio.session import StudioSession
 
-    gate = threading.Event()
-
-    class SlowStop(SimulatedBackend):
-        def stop(self) -> None:
-            gate.wait(2.0)
-            super().stop()
-
+    backend = SimulatedBackend()
     session = StudioSession(
-        backend=SlowStop(),
+        backend=backend,
         camera=FrameSource(None),
         hardware=False,
         groups_path=tmp_path / "g.json",
     )
-    started = time.time()
+    session.set_mode("gesture")
     session.set_mode("teleop")
-    assert time.time() - started < 0.3
     assert session.mode == "teleop"
+    assert any(item == "STOP" for item in backend.events)
     assert "QWEASD" in session.last_reply
-    gate.set()
+
+
+def test_wrestle_blocks_walk_until_reboot_cleared(tmp_path):
+    from r1_agent.executor import SimulatedBackend
+    from r1_studio.camera import FrameSource
+    from r1_studio.session import StudioSession
+
+    session = StudioSession(
+        backend=SimulatedBackend(),
+        camera=FrameSource(None),
+        hardware=False,
+        groups_path=tmp_path / "g.json",
+    )
+    session.set_mode("wrestle")
+    assert session.r1_needs_reboot is True
+    try:
+        session.set_mode("teleop")
+        assert False
+    except Exception as error:
+        assert "重新开机" in str(error) or "调试" in str(error)
+    blocked = session.teleop_keys(["w"])
+    assert blocked["ok"] is False
+    assert "开机" in blocked["error"] or "调试" in blocked["error"]
+    session.clear_wrestle_reboot()
+    session.set_mode("teleop")
+    assert session.mode == "teleop"
+    assert session.r1_needs_reboot is False
 
 
 def test_vision_intent_and_summary():
@@ -536,7 +553,10 @@ def test_studio_http_and_custom_group(tmp_path):
     try:
         home = urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=3).read()
         assert "图形化编程".encode() in home
-        assert "无法撤回".encode() in home
+        assert "语音问答".encode() in home
+        assert "动作模仿".encode() in home
+        assert "扳手腕".encode() in home
+        assert "无法从网页撤回".encode() in home
         assert "开始键盘遥控".encode() in home
         assert "笔记本摄像头".encode() in home
         assert "R1 机载摄像头".encode() in home

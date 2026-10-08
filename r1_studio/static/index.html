@@ -20,6 +20,10 @@
       <button data-tab="gesture">手势操作</button>
       <button data-tab="vision">校园识别</button>
       <button data-tab="blocks">图形化编程</button>
+      <button data-tab="agent">语音问答</button>
+      <button data-tab="greet">近距迎宾</button>
+      <button data-tab="imitate">动作模仿</button>
+      <button data-tab="wrestle">扳手腕</button>
     </nav>
     <div class="safety">
       <button id="estop" class="danger">软急停</button>
@@ -109,6 +113,65 @@
         </div>
         <ul id="vision-items"></ul>
         <p class="hint">先点开始，把物品放进镜头再提问。图书馆平面等设置在页面最下方折叠栏。</p>
+      </section>
+      <section id="panel-agent" class="panel hidden">
+        <h2>语音问答（r1-agent）</h2>
+        <p class="hint">和单独运行 <code>python -m r1_agent --listen</code> 同一套：听一句或打字，按白名单做挥手、走路、说话。切换走其他功能时会先把上一套后台整段停掉。</p>
+        <p>
+          <button type="button" id="start-agent">开始语音问答</button>
+          <button type="button" id="stop-agent" class="ghost">结束语音问答</button>
+        </p>
+        <p>也可以用下面「课堂助手」输入框。听一轮需要真机麦克风。</p>
+      </section>
+      <section id="panel-greet" class="panel hidden">
+        <h2>近距迎宾（双目测距 + 原地手部）</h2>
+        <p class="hint">人走进大约 0.5–1.8 米会挥手问好。只做原地手臂动作，<strong>不会走路</strong>。半米内会请你稍微退后；0.3 米贴脸时停手。下面课堂助手的打字/听一轮会接上刚才的迎宾上下文。</p>
+        <p>
+          <button type="button" id="start-greet">开始近距迎宾</button>
+          <button type="button" id="stop-greet" class="ghost">结束近距迎宾</button>
+        </p>
+        <p>当前：<strong id="greet-label">近距迎宾未开启</strong></p>
+        <p class="cap">测距 <code id="greet-dist">—</code>　区 <code id="greet-zone">unknown</code>　来源 <code id="greet-source">—</code></p>
+        <aside class="gesture-sheet">
+          <p class="kicker">安全距离</p>
+          <ol class="gesture-list">
+            <li>0.5–1.8 米：挥手、鼓掌、点头；可语音接着聊</li>
+            <li>0.3–0.5 米：说话提醒「请稍微离我远一点」，不再挥手</li>
+            <li>0.3 米内：贴脸停手，担心不小心碰到你</li>
+          </ol>
+          <p class="kicker">手部互动（原地）</p>
+          <ol class="gesture-list">
+            <li>张开手掌 / 单臂侧举：挥手打招呼</li>
+            <li>比耶 / 双手上举：欢呼</li>
+            <li>双手打开（侧平举）：张开双臂</li>
+            <li>握拳 / 双臂下垂：回到准备姿态</li>
+          </ol>
+          <p class="hint">机载图传目前是单路 JPEG。点开始后右上角彩图是 SGBM 深度预览（平移自检），安全距离仍用肩宽。浏览器也可打开 <code>/api/depth</code> 看自检 JSON。</p>
+        </aside>
+      </section>
+      <section id="panel-imitate" class="panel hidden">
+        <h2>动作模仿（跟臂）</h2>
+        <p class="hint">人站在镜头前，机器人学着抬手臂。自拍约定：<strong>你的右手 → 机器人左臂</strong>。和单独跑 <code>python -m imitate --hardware</code> 同一套 Pose 跟臂。卡顿可以接受；切走会停掉跟臂后台。</p>
+        <p>
+          <button type="button" id="start-imitate">开始动作模仿</button>
+          <button type="button" id="stop-imitate" class="ghost">结束动作模仿</button>
+        </p>
+        <p>当前：<strong id="imitate-label">动作模仿未开启</strong></p>
+      </section>
+      <section id="panel-wrestle" class="panel hidden">
+        <h2>扳手腕（调试模式）</h2>
+        <p class="confirm-warn">这一项不走教师操作台的走跑控制。需要用遥控器把 R1 切到<strong>调试模式</strong>，再用原来单独能跑通的扳手腕程序。进了调试之后，<strong>必须给 R1 关机再开机</strong>，才能回到本页的键盘/手势/跟臂。</p>
+        <ol class="hint">
+          <li>先点「准备离开走跑」：本页会停掉所有教师台后台，并记下「回来前要重新开机」。</li>
+          <li>用遥控器把 R1 切进调试，再运行你们原来的扳手腕程序（本页不会替你进调试、也不会发走跑步态）。</li>
+          <li>活动结束：R1 关机 → 再开机 → 确认站稳走跑。</li>
+          <li>回到本页，点「已重新开机」，才能再开键盘、手势、语音或跟臂。</li>
+        </ol>
+        <p>
+          <button type="button" id="start-wrestle" class="danger">准备离开走跑（去扳手腕）</button>
+          <button type="button" id="clear-wrestle" class="ghost">已重新开机，回到教师操作台</button>
+        </p>
+        <p id="wrestle-status" class="arm-banner">当前：仍可使用教师操作台（走跑）。</p>
       </section>
     </section>
 

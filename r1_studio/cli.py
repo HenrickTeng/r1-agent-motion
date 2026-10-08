@@ -22,7 +22,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--scene", default="")
     parser.add_argument(
         "--probe",
-        choices=["gestures", "vision", "keys", "llm"],
+        choices=["gestures", "vision", "keys", "llm", "depth"],
         default="",
         help="分阶段单功能探测：只打印识别结果，不启动网页、不驱动机器人",
     )
@@ -63,6 +63,15 @@ def main(argv: list[str] | None = None) -> int:
         from r1_studio.probe import probe_llm
 
         return probe_llm()
+    if args.probe == "depth":
+        from r1_studio.probe import probe_depth
+
+        return probe_depth(
+            camera=args.camera,
+            r1_camera=args.r1_camera,
+            interface=args.interface,
+            window=args.window,
+        )
     synthetic = args.synthetic_camera or (args.camera is None and not args.r1_camera)
     preview = bool(args.preview) and not args.no_preview
     if args.r1_camera:

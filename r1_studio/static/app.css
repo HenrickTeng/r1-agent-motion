@@ -44,7 +44,11 @@ main { padding: 20px; max-width: 1280px; margin: 0 auto; }
 .hero { grid-template-columns: 1fr; }
 .hero:has(#panel-gesture:not(.hidden)),
 .hero:has(#panel-teleop:not(.hidden)),
-.hero:has(#panel-vision:not(.hidden)) { grid-template-columns: 1.45fr 1fr; }
+.hero:has(#panel-vision:not(.hidden)),
+.hero:has(#panel-agent:not(.hidden)),
+.hero:has(#panel-greet:not(.hidden)),
+.hero:has(#panel-imitate:not(.hidden)),
+.hero:has(#panel-wrestle:not(.hidden)) { grid-template-columns: 1.45fr 1fr; }
 .video-card, .status-card, .panel {
   background: var(--card);
   border-radius: 18px;
@@ -186,6 +190,9 @@ footer {
   .hero, .blocks-layout,
   .hero:has(#panel-gesture:not(.hidden)),
   .hero:has(#panel-teleop:not(.hidden)),
-  .hero:has(#panel-vision:not(.hidden)) { grid-template-columns: 1fr; }
+  .hero:has(#panel-vision:not(.hidden)),
+  .hero:has(#panel-agent:not(.hidden)),
+  .hero:has(#panel-imitate:not(.hidden)),
+  .hero:has(#panel-wrestle:not(.hidden)) { grid-template-columns: 1fr; }
   .top { flex-wrap: wrap; }
 }

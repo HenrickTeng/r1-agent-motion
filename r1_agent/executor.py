@@ -45,6 +45,12 @@ class SimulatedBackend:
             return
         self._record(f"DRIVE {vx:.3f} {vy:.3f} {omega:.3f} {duration:.2f}")
 
+    def track_arm(self, arm_rad: dict, dt: float) -> None:
+        self._record(f"TRACK {len(arm_rad)} {dt:.2f}")
+
+    def goto_ready(self, seconds: float = 3.0) -> None:
+        self._record(f"READY {seconds:.1f}")
+
     def soft_estop(self) -> None:
         self._record("ESTOP")
 

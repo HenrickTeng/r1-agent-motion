@@ -28,11 +28,19 @@ from r1_studio.programs import (
     validate_group_name,
 )
 from r1_studio.teleop import clamp_twist, keys_to_twist, twist_duration
+from r1_studio.proximity import GREET_CONTEXT, GreetPilot, drop_locomotion
 from r1_studio.vision import (
     Detection,
     ask_campus,
     is_vision_intent,
     load_campus_text,
+)
+
+WALK_MODES = frozenset({"teleop", "gesture", "vision", "blocks", "agent", "imitate", "greet"})
+STUDIO_MODES = WALK_MODES | {"idle", "wrestle"}
+WRESTLE_LEAVE_HINT = (
+    "扳手腕需要遥控器把 R1 切到调试模式。调试结束后，教师操作台用的走跑控制会失效，"
+    "必须先给 R1 关机再开机，确认站稳走跑后，再在本页点「已重新开机」。网页不能替你开机。"
 )
 
 
@@ -118,6 +126,20 @@ class StudioSession:
         self._deadman = threading.Thread(target=self._deadman_loop, daemon=True)
         self._deadman.start()
         self._gesture_busy = False
+        self.r1_needs_reboot = False
+        self.imitate_label = "动作模仿未开启"
+        self.greet_label = "近距迎宾未开启"
+        self.greet_detail: dict = {
+            "distance_m": None,
+            "zone": "unknown",
+            "source": "",
+            "pose": "none",
+            "note": "",
+        }
+        self._greet = GreetPilot()
+        self._greet_busy = False
+        self._dialog_planner: DeepSeekPlanner | None = None
+        self._dialog_key = ""
         self.camera.start()
 
     def campus_context(self) -> str:
@@ -178,10 +200,32 @@ class StudioSession:
                 "library_on": self.library_on,
                 "context": self.campus_context(),
                 "turns": list(self.vision_turns[-12:]),
+                "dialog": list(self._dialog_planner._turns[-12:]) if self._dialog_planner else [],
             },
             "groups": self.custom_groups,
             "presets": PRESETS,
+            "r1_needs_reboot": self.r1_needs_reboot,
+            "imitate": self.imitate_label,
+            "greet": self.greet_label,
+            "greet_detail": dict(self.greet_detail),
         }
+
+    def debug_stereo(self) -> dict:
+        from r1_studio.depth import inspect_stereo
+
+        frame, _jpeg = self.camera.snapshot()
+        info, preview = inspect_stereo(frame)
+        info["camera"] = self.camera.label
+        info["camera_source"] = self.camera_source
+        if preview is not None:
+            try:
+                import cv2
+
+                cv2.imwrite("/tmp/r1_sgbm_local.jpg", preview)
+                info["preview"] = "/tmp/r1_sgbm_local.jpg"
+            except Exception:
+                pass
+        return info
 
     def catalog_payload(self) -> dict:
         catalog = self.catalog
@@ -200,12 +244,20 @@ class StudioSession:
         }
 
     def set_mode(self, mode: str) -> None:
-        if mode not in ("idle", "teleop", "gesture", "vision", "blocks"):
+        if mode not in STUDIO_MODES:
             raise ProgramError("未知模式")
+        if mode in WALK_MODES and self.r1_needs_reboot:
+            raise ProgramError(WRESTLE_LEAVE_HINT)
         previous = self.mode
+        self._shutdown_activity()
         self.mode = mode
+        self.busy = False
+        self.last_error = ""
+        if mode == "wrestle":
+            self.r1_needs_reboot = True
+            self.last_reply = WRESTLE_LEAVE_HINT
+            return
         if mode == "gesture":
-            self.busy = False
             self._last_gesture_drive = 0.0
             self._operator.reset()
             self._body.reset()
@@ -215,27 +267,73 @@ class StudioSession:
                 if self.camera_source == "r1"
                 else "手势操作已开启"
             )
-            if previous in ("teleop", "blocks"):
-                threading.Thread(target=self._stop_backend_quiet, daemon=True).start()
             return
+        if mode == "imitate":
+            self._start_live()
+            self.imitate_label = "动作模仿已开启。人的右手 → 机器人左臂。"
+            self.last_reply = self.imitate_label
+            if self.hardware:
+                threading.Thread(target=self._imitate_prepare, daemon=True).start()
+            return
+        if mode == "teleop":
+            self.last_reply = "键盘遥控已开启。请先点一下旁边的 QWEASD 格子，浏览器才会接收按键。"
+            return
+        if mode == "agent":
+            self.last_reply = "课堂语音问答已开启。可以打字或听一轮，和单独跑 r1-agent 一样。"
+            return
+        if mode == "greet":
+            self._greet.reset()
+            self._start_live()
+            self.greet_label = "近距迎宾已开启。0.5–1.8 米挥手；半米内提醒退后；0.3 米内停手。"
+            self.last_reply = self.greet_label + " 语音和打字会接上刚才的迎宾上下文，且不会走路。"
+            return
+        if mode == "idle":
+            self.gesture_label = "手势未开启"
+            self.imitate_label = "动作模仿未开启"
+            self.greet_label = "近距迎宾未开启"
+
+    def _shutdown_activity(self) -> None:
+        """切换功能时把上一套后台整段停掉，求稳，卡顿可以接受。"""
         self._stop_live_loop()
         if self._live_thread is not None and not self._live_thread.is_alive():
             self._live_thread = None
-        self.busy = False
         with self._twist_lock:
             self._want_move = False
-        self.gesture_label = "手势未开启"
-        self.last_error = ""
-        if mode == "teleop":
-            self.last_reply = "键盘遥控已开启。请先点一下旁边的 QWEASD 格子，浏览器才会接收按键。"
-        if previous in ("gesture", "teleop") or mode == "idle":
-            threading.Thread(target=self._stop_backend_quiet, daemon=True).start()
+        self.busy = False
+        try:
+            self.backend.stop()
+        except Exception:
+            pass
 
     def _stop_backend_quiet(self) -> None:
         try:
             self.backend.stop()
         except Exception:
             pass
+
+    def clear_wrestle_reboot(self) -> dict:
+        self.r1_needs_reboot = False
+        self.last_reply = "已记录：R1 重新开机并回到走跑。可以再点「开始」。"
+        self.last_error = ""
+        return self.state()
+
+    def _ensure_walk_ok(self) -> None:
+        if self.r1_needs_reboot:
+            raise ProgramError(WRESTLE_LEAVE_HINT)
+
+    def _imitate_prepare(self) -> None:
+        try:
+            robot = getattr(self.backend, "robot", None) or self.listen_robot
+            if robot is None:
+                self.backend.goto_ready(1.0)
+                return
+            if hasattr(robot, "require_walk_run"):
+                robot.require_walk_run()
+            self.backend.goto_ready(2.5)
+            self.last_reply = "已回课堂准备姿态，开始跟臂。"
+        except Exception as error:
+            self.last_error = str(error)
+            self.imitate_label = f"跟臂准备失败：{error}"
 
     def switch_camera(self, source: str, camera: int = 0) -> dict:
         source = (source or "").strip().lower()
@@ -279,6 +377,8 @@ class StudioSession:
         return self.state()
 
     def teleop_keys(self, keys: list[str], *, slow: bool = False) -> dict:
+        if self.r1_needs_reboot:
+            return {"ok": False, "error": WRESTLE_LEAVE_HINT, "vx": 0.0, "vy": 0.0, "omega": 0.0, "duration": 0.0}
         if self.mode != "teleop":
             return {"ok": False, "error": "请先点「开始键盘遥控」", "vx": 0.0, "vy": 0.0, "omega": 0.0, "duration": 0.0}
         self.busy = False
@@ -286,6 +386,8 @@ class StudioSession:
         return self.drive(vx, vy, omega)
 
     def drive(self, vx: float, vy: float, omega: float) -> dict:
+        if self.r1_needs_reboot:
+            return {"ok": False, "error": WRESTLE_LEAVE_HINT, "vx": vx, "vy": vy, "omega": omega, "duration": 0.0}
         vx, vy, omega = clamp_twist(vx, vy, omega)
         moving = abs(vx) + abs(vy) + abs(omega) >= 1e-3
         if moving:
@@ -342,6 +444,8 @@ class StudioSession:
         self.last_reply = "急停已解除。"
 
     def run_names(self, names: list[str], *, reply: str = "") -> dict:
+        if self.r1_needs_reboot:
+            return {"ok": False, "error": WRESTLE_LEAVE_HINT}
         catalog = self.catalog
         try:
             actions = expand_steps(names, catalog)
@@ -356,6 +460,8 @@ class StudioSession:
         return {"ok": False, "error": "没有这个预设"}
 
     def run_program(self, payload: dict) -> dict:
+        if self.r1_needs_reboot:
+            return {"ok": False, "error": WRESTLE_LEAVE_HINT}
         try:
             name, actions = load_program(payload, self.catalog)
         except ProgramError as error:
@@ -402,34 +508,67 @@ class StudioSession:
         save_groups_file(self.groups_path, self.custom_groups)
         return {"ok": True, "groups": self.custom_groups}
 
-    def handle_text(self, text: str, *, speak_reply: bool | None = None) -> dict:
-        text = text.strip()
-        if not text:
-            return {"ok": False, "error": "空文本"}
-        if self.mode == "vision" or is_vision_intent(text):
-            return self.capture_vision(speak=True, question=text)
-        use_deepseek = bool(self.llm_key or load_deepseek_key())
-        planner = (
-            DeepSeekPlanner(
+    def _planner_context(self) -> str:
+        if self.mode != "greet":
+            return ""
+        dist = self._greet.meters
+        dist_text = "未知" if dist is None else f"{dist:.2f} 米"
+        return GREET_CONTEXT + f"\n刚才视觉测距约 {dist_text}，安全区 {self._greet.zone}。"
+
+    def _ensure_dialog_planner(self) -> DeepSeekPlanner | None:
+        key = f"{self.llm_key}|{self.llm_url}|{self.llm_model}"
+        use = bool(self.llm_key or load_deepseek_key())
+        if not use:
+            return self._dialog_planner
+        if self._dialog_planner is None or self._dialog_key != key:
+            self._dialog_planner = DeepSeekPlanner(
                 self.catalog,
+                context=self._planner_context(),
                 api_url=self.llm_url,
                 model=self.llm_model,
                 api_key=self.llm_key,
             )
-            if use_deepseek
-            else RulePlanner(self.catalog)
-        )
+            self._dialog_key = key
+        else:
+            self._dialog_planner.catalog = self.catalog
+            self._dialog_planner.context = self._planner_context()
+        return self._dialog_planner
+
+    def _remember_dialog(self, text: str, reply: str, names: list[str]) -> None:
+        self._ensure_dialog_planner()
+        if self._dialog_planner is None:
+            return
+        self._dialog_planner._remember(text, reply, names)
+
+    def handle_text(self, text: str, *, speak_reply: bool | None = None) -> dict:
+        text = text.strip()
+        if not text:
+            return {"ok": False, "error": "空文本"}
+        if self.r1_needs_reboot:
+            return {"ok": False, "error": WRESTLE_LEAVE_HINT}
+        if self.mode == "vision" or is_vision_intent(text):
+            return self.capture_vision(speak=True, question=text)
+        planner = self._ensure_dialog_planner() or RulePlanner(self.catalog)
         try:
             reply, actions = planner.plan(text)
         except Exception as error:
             reply, actions = RulePlanner(self.catalog).plan(text)
             self.last_error = str(error)
+        if self.mode == "greet":
+            actions = drop_locomotion(actions)
+            if not self._greet.allows_arm():
+                actions = [item for item in actions if item.kind == "speech"]
+                safety = self._greet.safety_reply()
+                if safety:
+                    reply = safety
         speak = self.hardware if speak_reply is None else speak_reply
         result = self._execute(actions, reply, speak=speak)
         result["heard"] = text
         return result
 
     def listen_once(self) -> dict:
+        if self.r1_needs_reboot or self.mode == "wrestle":
+            return {"ok": False, "error": WRESTLE_LEAVE_HINT}
         if self.listen_robot is None:
             return {"ok": False, "error": "仿真模式没有机器人麦克风，请在输入框里打字"}
         try:
@@ -561,6 +700,14 @@ class StudioSession:
         last_print = ""
         while not self._stop_live.is_set():
             frame = self._prepared_frame()
+            if self.mode == "imitate":
+                self._imitate_frame(frame)
+                time.sleep(0.05)
+                continue
+            if self.mode == "greet":
+                self._greet_frame(frame)
+                time.sleep(0.06)
+                continue
             hands: list = []
             persons: list = []
             owned: list = []
@@ -658,6 +805,139 @@ class StudioSession:
             except Exception:
                 pass
 
+    def _detection_view(self, frame):
+        from r1_studio.depth import split_stereo
+
+        left, _right = split_stereo(frame)
+        return left if left is not None else frame
+
+    def _greet_frame(self, frame) -> None:
+        from r1_studio.camera import _encode, shrink_frame
+        from r1_studio.depth import DistanceEstimate, LAPTOP_HFOV_DEG, R1_HFOV_DEG, estimate_distance, overlay_proximity
+        from r1_studio.proximity import pick_pose
+
+        view = self._detection_view(frame)
+        boxes: list[tuple[float, float, float, float]] = []
+        hands: list = []
+        body_pose = "none"
+        landmarks = None
+        if view is not None:
+            if self.camera_source == "r1":
+                landmarks = self._detect_pose(view)
+                if landmarks:
+                    from r1_studio.body import classify_body
+
+                    body_pose = classify_body(landmarks)
+            else:
+                hands = self._detect_hands(view)
+                boxes = self._detect_persons(view)
+        estimate, depth_preview = estimate_distance(
+            frame if frame is not None else view,
+            boxes,
+            landmarks=landmarks,
+            fov_deg=R1_HFOV_DEG if self.camera_source == "r1" else LAPTOP_HFOV_DEG,
+        )
+        pose = pick_pose(hands=hands, body_pose=body_pose)
+        event = self._greet.step(estimate.meters, pose, time.time())
+        note = event.note or "近距迎宾"
+        self.greet_label = note
+        self.greet_detail = {
+            "distance_m": event.meters,
+            "zone": event.zone,
+            "source": estimate.source,
+            "pose": pose,
+            "note": note,
+        }
+        self.gesture_label = note
+        self.gesture_detail = {
+            "poses": [pose] if pose and pose != "none" else [],
+            "kind": event.kind,
+            "label": note,
+            "vx": 0.0,
+            "vy": 0.0,
+            "omega": 0.0,
+            "operator": event.zone,
+            "operator_label": "" if estimate.meters is None else f"{estimate.meters:.2f} m",
+            "strategy": "proximity",
+            "issued": event.kind in ("greet", "gesture", "warn", "freeze") and bool(event.actions or event.reply),
+            "skip": "" if event.kind != "idle" else note,
+        }
+        if event.kind == "freeze":
+            try:
+                self.backend.stop()
+            except Exception:
+                pass
+            if event.reply:
+                self._kick_greet(event)
+        elif event.kind in ("greet", "gesture", "warn") and (event.actions or event.reply):
+            self._kick_greet(event)
+        if view is None:
+            return
+        try:
+            shown = DistanceEstimate(event.meters, estimate.source, estimate.box, estimate.stereo)
+            painted = overlay_proximity(
+                shrink_frame(view, 640).copy(),
+                shown,
+                event.zone,
+                note,
+                depth_preview,
+            )
+            self.camera.set_preview_jpeg(_encode(painted))
+        except Exception:
+            pass
+
+    def _kick_greet(self, event) -> None:
+        if self._greet_busy:
+            return
+        self._greet_busy = True
+
+        def run() -> None:
+            try:
+                self._apply_greet_event(event)
+            finally:
+                self._greet_busy = False
+
+        threading.Thread(target=run, daemon=True).start()
+
+    def _apply_greet_event(self, event) -> None:
+        dist = "未知" if event.meters is None else f"{event.meters:.2f} 米"
+        visual = f"[视觉] 同学大约在 {dist}，区={event.zone}，姿势={event.pose}。{event.note}"
+        if event.kind == "freeze":
+            try:
+                self.backend.stop()
+            except Exception:
+                pass
+            if event.reply:
+                try:
+                    self.backend.speak(event.reply)
+                except Exception as error:
+                    self.last_error = str(error)
+                self.last_reply = event.reply
+                self._remember_dialog(visual, event.reply, [])
+            return
+        if event.kind == "warn":
+            if event.reply:
+                try:
+                    self.backend.speak(event.reply)
+                except Exception as error:
+                    self.last_error = str(error)
+                self.last_reply = event.reply
+                self._remember_dialog(visual, event.reply, [])
+            return
+        if event.kind in ("greet", "gesture") and (event.actions or event.reply):
+            names = [name for name in event.actions if not str(name).startswith("say:")]
+            spoken = event.reply
+            self._remember_dialog(visual, spoken or event.note, list(event.actions))
+            if spoken:
+                try:
+                    self.backend.speak(spoken)
+                except Exception as error:
+                    self.last_error = str(error)
+            if names:
+                self.run_names(names, reply=spoken or event.note)
+            elif spoken:
+                self.last_reply = spoken
+
     def _detect_hands(self, frame) -> list:
         try:
             if self._hands is None:
@@ -670,15 +950,52 @@ class StudioSession:
             return []
 
     def _detect_pose(self, frame):
+        image, _world = self._detect_pose_pair(frame)
+        return image
+
+    def _detect_pose_pair(self, frame) -> tuple:
         try:
             if self._pose is None:
                 from r1_studio.body import PoseTracker
 
                 self._pose = PoseTracker()
-            return self._pose.detect_bgr(frame)
+            if hasattr(self._pose, "detect_pair"):
+                return self._pose.detect_pair(frame)
+            return self._pose.detect_bgr(frame), None
         except Exception as error:
             self.gesture_label = f"全身 Pose 未就绪：{error}"
-            return None
+            self.imitate_label = f"全身 Pose 未就绪：{error}"
+            return None, None
+
+    def _imitate_frame(self, frame) -> None:
+        from r1_studio.camera import _encode, shrink_frame
+        from r1_studio.body import overlay_pose
+
+        image_lm = None
+        status = "未看到全身"
+        if frame is not None:
+            image_lm, world = self._detect_pose_pair(frame)
+            if world:
+                try:
+                    from imitate.pose_to_arm import landmarks_to_arm_rad, mediapipe_world_to_array
+                    from imitate.retarget import retarget_to_ready
+
+                    pose = retarget_to_ready(landmarks_to_arm_rad(mediapipe_world_to_array(world)))
+                    self.backend.track_arm(pose, 0.05)
+                    status = "正在跟臂（人右手→机器人左臂）"
+                except Exception as error:
+                    status = str(error)
+            elif image_lm:
+                status = "看到骨架，世界坐标还不够，请整个人进画面"
+        self.imitate_label = status
+        self.gesture_label = status
+        if frame is None:
+            return
+        try:
+            painted = overlay_pose(shrink_frame(frame, 640).copy(), image_lm, status)
+            self.camera.set_preview_jpeg(_encode(painted))
+        except Exception:
+            pass
 
     def _detect_persons(self, frame) -> list[tuple[float, float, float, float]]:
         self._person_tick += 1

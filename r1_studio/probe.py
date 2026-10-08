@@ -286,3 +286,53 @@ def probe_llm() -> int:
     except Exception as err:
         _print({"ok": False, "error": str(err)})
         return 1
+
+
+def probe_depth(*, camera: int | None, r1_camera: bool, interface: str, window: bool) -> int:
+    import time
+
+    from r1_studio.camera import open_camera
+    from r1_studio.depth import inspect_stereo
+
+    source = open_camera(
+        camera=0 if camera is None and not r1_camera else camera,
+        r1_camera=r1_camera,
+        interface=interface,
+        synthetic=False,
+    )
+    source.start()
+    _print({
+        "probe": "depth",
+        "hint": "验收 SGBM：机载若不是左右拼图，会用平移视差自检。不驱动机器人。Ctrl+C 结束。",
+        "camera": source.label,
+    })
+    last = ""
+    cv2 = None
+    if window:
+        import cv2 as _cv2
+
+        cv2 = _cv2
+    try:
+        while True:
+            frame, _jpeg = source.snapshot()
+            if frame is None:
+                time.sleep(0.05)
+                continue
+            info, preview = inspect_stereo(frame)
+            line = json.dumps(info, ensure_ascii=False)
+            if line != last:
+                _print(info)
+                last = line
+            if window and preview is not None and cv2 is not None:
+                cv2.imshow("R1 stereo SGBM probe", preview)
+                if cv2.waitKey(1) & 0xFF in (ord("q"), 27):
+                    break
+            else:
+                time.sleep(0.25)
+    except KeyboardInterrupt:
+        _print({"probe": "depth", "event": "interrupt"})
+    finally:
+        source.close()
+        if cv2 is not None:
+            cv2.destroyAllWindows()
+    return 0
