@@ -20,6 +20,9 @@ import json
 import math
 import time
 
+from r1_agent.dds_setup import prepare_cyclonedds
+
+prepare_cyclonedds()
 from unitree_sdk2py.core.channel import ChannelFactoryInitialize, ChannelSubscriber
 from unitree_sdk2py.idl.unitree_hg.msg.dds_ import LowState_
 

@@ -1,0 +1,14 @@
+{
+  "source": "calibrate",
+  "note": "人自然垂臂时的 IK 绝对角（度）。cmd = ready + scale * (ik - standing)",
+  "left_shoulder_pitch": -2.092,
+  "left_shoulder_roll": 18.21,
+  "left_shoulder_yaw": -25.823,
+  "left_elbow": 34.752,
+  "left_wrist_roll": 0.0,
+  "right_shoulder_pitch": -4.417,
+  "right_shoulder_roll": -21.412,
+  "right_shoulder_yaw": 30.805,
+  "right_elbow": 33.142,
+  "right_wrist_roll": 0.0
+}

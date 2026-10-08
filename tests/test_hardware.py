@@ -3,7 +3,7 @@ import math
 import pytest
 
 from r1_agent.catalog import load_catalog
-from r1_agent.dds_robot import AMPLITUDE, LOCO, MOTIONS, READY_POSE_DEG, RSP, SHOULDER_PITCH, _loco_issued
+from r1_agent.dds_robot import AMPLITUDE, LOCO, MOTIONS, READY_POSE_DEG, RSP, SHOULDER_PITCH, WALK_FSMS, _loco_issued
 from r1_agent.hardware import R1Hardware
 
 
@@ -25,6 +25,34 @@ class FakeRobot:
 
     def stop(self) -> None:
         self.calls.append(("stop",))
+
+    def drive(self, vx, vy, omega, duration=0.4) -> None:
+        self.calls.append(("drive", vx, vy, omega, duration))
+
+    def soft_estop(self) -> None:
+        self.calls.append(("estop",))
+
+    def clear_estop(self) -> None:
+        self.calls.append(("estop_clear",))
+
+
+def test_deferred_hardware_wait_message():
+    from r1_agent.hardware import DeferredHardware
+
+    delayed = DeferredHardware()
+    try:
+        delayed.drive(0.1, 0, 0)
+        assert False
+    except RuntimeError as error:
+        assert "还在连接" in str(error)
+    delayed.attach(FakeRobot())
+    delayed.drive(0.1, 0, 0, 0.4)
+    delayed.fail("网线掉了")
+    try:
+        delayed.speak("hi")
+        assert False
+    except RuntimeError as error:
+        assert "网线" in str(error)
 
 
 def test_arm_uses_named_action():
@@ -60,6 +88,13 @@ def test_loco_issued_accepts_firmware_127():
     assert not _loco_issued(1001)
 
 
+def test_walk_fsms_include_arm_sdk_loco():
+    assert 811 in WALK_FSMS
+    assert 816 in WALK_FSMS
+    assert 1 not in WALK_FSMS
+    assert 4 not in WALK_FSMS
+
+
 def test_catalog_arm_and_loco_names_match_runners():
     catalog = load_catalog()
     for action in catalog.actions.values():
@@ -69,3 +104,12 @@ def test_catalog_arm_and_loco_names_match_runners():
             assert action.name in LOCO
             vx, vy, omega, duration = LOCO[action.name]
             assert action.args == {"vx": vx, "vy": vy, "omega": omega, "duration": duration}
+
+
+def test_hardware_drive_and_estop():
+    robot = FakeRobot()
+    hardware = R1Hardware(robot=robot)
+    hardware.drive(0.2, 0.0, 0.0, 0.4)
+    hardware.soft_estop()
+    assert robot.calls[0][0] == "drive"
+    assert robot.calls[1] == ("estop",)
