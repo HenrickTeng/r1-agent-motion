@@ -112,6 +112,25 @@ class StudioHandler(BaseHTTPRequestHandler):
                 )
             if path == "/api/groups/delete":
                 return self._json(200, self.session.delete_group(str(payload.get("name") or "")))
+            if path == "/api/motion/snapshot":
+                return self._json(200, {"ok": True, "frame": self.session.snapshot_arm()})
+            if path == "/api/motion/save":
+                return self._json(200, self.session.save_motion_group(payload))
+            if path == "/api/motion/delete":
+                return self._json(200, self.session.delete_motion_group(str(payload.get("id") or "")))
+            if path == "/api/motion/get":
+                return self._json(200, self.session.motion_group(str(payload.get("id") or "")))
+            if path == "/api/motion/export":
+                return self._json(200, self.session.motion_document(str(payload.get("id") or "")))
+            if path == "/api/motion/play":
+                return self._json(200, self.session.play_motion_group(str(payload.get("id") or "")))
+            if path == "/api/skill/run":
+                return self._json(200, self.session.run_skill(payload.get("workflow") or []))
+            if path == "/api/skill/export":
+                blob = self.session.export_skill(payload)
+                return self._bytes(200, blob, "application/zip", "skillpack.zip")
+            if path == "/api/python/run":
+                return self._json(200, self.session.run_python(str(payload.get("source") or "")))
             if path == "/api/wrestle/cleared":
                 return self._json(200, self.session.clear_wrestle_reboot())
         except Exception as error:
@@ -122,7 +141,7 @@ class StudioHandler(BaseHTTPRequestHandler):
         length = int(self.headers.get("Content-Length") or 0)
         if length <= 0:
             return {}
-        if length > 1_000_000:
+        if length > 2_000_000:
             return {}
         raw = self.rfile.read(length)
         try:
@@ -136,6 +155,15 @@ class StudioHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", mime)
         self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(data)
+
+    def _bytes(self, code: int, data: bytes, mime: str, filename: str) -> None:
+        self.send_response(code)
+        self.send_header("Content-Type", mime)
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(data)

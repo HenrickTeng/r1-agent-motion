@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import math
 import threading
 import time
 from pathlib import Path
@@ -27,6 +29,18 @@ from r1_studio.programs import (
     save_groups_file,
     validate_group_name,
 )
+from r1_studio.motion_library import (
+    MotionError,
+    export_motion,
+    human_deg_to_rad,
+    import_motion,
+    load_library,
+    sample_human_deg,
+    save_library,
+    summarize,
+    timeline,
+)
+from r1_studio.skillpack import SkillError, build_skill_zip, compile_python, expand_workflow, groups_by_id
 from r1_studio.teleop import clamp_twist, keys_to_twist, twist_duration
 from r1_studio.proximity import GREET_CONTEXT, GreetPilot, drop_locomotion
 from r1_studio.vision import (
@@ -36,7 +50,7 @@ from r1_studio.vision import (
     load_campus_text,
 )
 
-WALK_MODES = frozenset({"teleop", "gesture", "vision", "blocks", "agent", "imitate", "greet"})
+WALK_MODES = frozenset({"teleop", "gesture", "vision", "blocks", "agent", "imitate", "greet", "skills"})
 STUDIO_MODES = WALK_MODES | {"idle", "wrestle"}
 WRESTLE_LEAVE_HINT = (
     "扳手腕需要遥控器把 R1 切到调试模式。调试结束后，教师操作台用的走跑控制会失效，"
@@ -72,6 +86,13 @@ class StudioSession:
 
             self.base_catalog = merge_scene(self.base_catalog, load_scene_pack(scene))
         self.custom_groups = load_groups_file(groups_path)
+        self.motion_path = groups_path.parent / "motion_library.json"
+        try:
+            self.motion_groups = load_library(self.motion_path)
+        except (OSError, json.JSONDecodeError, MotionError):
+            self.motion_groups = []
+        self._arm_pose: dict | None = None
+        self._motion_stop = threading.Event()
         self.mode = "idle"
         self.busy = False
         self.last_error = ""
@@ -203,6 +224,7 @@ class StudioSession:
                 "dialog": list(self._dialog_planner._turns[-12:]) if self._dialog_planner else [],
             },
             "groups": self.custom_groups,
+            "motions": summarize(self.motion_groups),
             "presets": PRESETS,
             "r1_needs_reboot": self.r1_needs_reboot,
             "imitate": self.imitate_label,
@@ -275,6 +297,11 @@ class StudioSession:
             if self.hardware:
                 threading.Thread(target=self._imitate_prepare, daemon=True).start()
             return
+        if mode == "skills":
+            self.last_reply = "技能与动作库已开启。回放、技能包和 Python 会发给 R1。记关键帧请另外开动作模仿。"
+            if self.hardware:
+                threading.Thread(target=self._imitate_prepare, daemon=True).start()
+            return
         if mode == "teleop":
             self.last_reply = "键盘遥控已开启。请先点一下旁边的 QWEASD 格子，浏览器才会接收按键。"
             return
@@ -330,7 +357,11 @@ class StudioSession:
             if hasattr(robot, "require_walk_run"):
                 robot.require_walk_run()
             self.backend.goto_ready(2.5)
-            self.last_reply = "已回课堂准备姿态，开始跟臂。"
+            self.last_reply = (
+                "已回课堂准备姿态。"
+                if self.mode == "skills"
+                else "已回课堂准备姿态，开始跟臂。"
+            )
         except Exception as error:
             self.last_error = str(error)
             self.imitate_label = f"跟臂准备失败：{error}"
@@ -431,6 +462,7 @@ class StudioSession:
             self.last_error = "遥控超时已停步。松开按键应马上停；网页关掉也会停。"
 
     def estop(self) -> None:
+        self._motion_stop.set()
         if self.mode != "idle":
             self.set_mode("idle")
         self.backend.soft_estop()
@@ -981,6 +1013,7 @@ class StudioSession:
                     from imitate.retarget import retarget_to_ready
 
                     pose = retarget_to_ready(landmarks_to_arm_rad(mediapipe_world_to_array(world)))
+                    self._arm_pose = dict(pose)
                     self.backend.track_arm(pose, 0.05)
                     status = "正在跟臂（人右手→机器人左臂）"
                 except Exception as error:
@@ -1059,3 +1092,167 @@ class StudioSession:
         except Exception as error:
             self.last_error = str(error)
             return False, str(error)
+
+    def _require_skills(self) -> None:
+        if self.r1_needs_reboot:
+            raise ProgramError(WRESTLE_LEAVE_HINT)
+        if self.mode != "skills":
+            raise ProgramError("先点「开始技能」再运行。记关键帧时开的是动作模仿，回放要换成技能。")
+
+    def snapshot_arm(self) -> dict:
+        if self.mode != "imitate":
+            raise ProgramError("先点「开始动作模仿」，人进入画面后再记录关键帧。")
+        if not self._arm_pose:
+            raise ProgramError("还没有跟上手臂。请整个人进入画面。")
+        from datetime import datetime, timezone
+
+        pose_deg = {name: round(math.degrees(float(self._arm_pose[name])), 3) for name in self._arm_pose}
+        return {
+            "interval": 0,
+            "captured_at": datetime.now(timezone.utc).isoformat(),
+            "source": "camera",
+            "mirror": True,
+            "pose_deg": pose_deg,
+        }
+
+    def save_motion_group(self, payload: dict) -> dict:
+        try:
+            if payload.get("schema_version"):
+                group = import_motion(payload)
+            else:
+                group = {
+                    "id": str(payload.get("id") or ""),
+                    "name": payload.get("name"),
+                    "frames": payload.get("frames") or [],
+                }
+                export_motion({**group, "id": group["id"] or "pending"})
+                if not group["id"]:
+                    import uuid
+
+                    group["id"] = str(uuid.uuid4())
+            export_motion(group)
+        except MotionError as error:
+            raise ProgramError(str(error)) from error
+        self.motion_groups = [item for item in self.motion_groups if item["id"] != group["id"]]
+        self.motion_groups.append(group)
+        save_library(self.motion_path, self.motion_groups)
+        self.last_reply = f"已保存动作组「{group['name']}」。"
+        return {"ok": True, "motions": summarize(self.motion_groups), "id": group["id"]}
+
+    def delete_motion_group(self, group_id: str) -> dict:
+        self.motion_groups = [item for item in self.motion_groups if item["id"] != group_id]
+        save_library(self.motion_path, self.motion_groups)
+        return {"ok": True, "motions": summarize(self.motion_groups)}
+
+    def motion_group(self, group_id: str) -> dict:
+        for group in self.motion_groups:
+            if group["id"] == group_id:
+                return {"ok": True, **group}
+        raise ProgramError("动作库里没有这个动作组。")
+
+    def motion_document(self, group_id: str) -> dict:
+        for group in self.motion_groups:
+            if group["id"] == group_id:
+                return export_motion(group)
+        raise ProgramError("动作库里没有这个动作组。")
+
+    def _play_arm_frames(self, frames: list[dict]) -> None:
+        total = timeline(frames)[-1] if frames else 0.0
+        started = time.monotonic()
+        while True:
+            if self._motion_stop.is_set() or self.mode != "skills":
+                break
+            elapsed = time.monotonic() - started
+            pose = human_deg_to_rad(sample_human_deg(frames, min(elapsed, total)))
+            self.backend.track_arm(pose, 0.05)
+            if elapsed >= total:
+                break
+            time.sleep(0.05)
+
+    def _run_planned(self, planned: list[dict], reply: str) -> dict:
+        self._require_skills()
+        with self._lock:
+            if self.busy:
+                return {"ok": False, "error": "上一条动作还在执行"}
+            self.busy = True
+        self._motion_stop.clear()
+        self.last_reply = reply
+        try:
+            for step in planned:
+                if self._motion_stop.is_set() or self.mode != "skills":
+                    break
+                kind = step["kind"]
+                if kind == "wait":
+                    time.sleep(float(step["seconds"]))
+                    continue
+                if kind == "arm":
+                    self._play_arm_frames(step["frames"])
+                    continue
+                action = step["action"]
+                print(f"SKILL {action.kind} {action.name}", flush=True)
+                if action.kind == "move":
+                    self.backend.move(action)
+                elif action.kind == "turn":
+                    self.backend.turn(action)
+                elif action.kind == "arm":
+                    self.backend.arm(action)
+                elif action.kind == "speech":
+                    self.backend.speak(str(action.args.get("text") or ""))
+            try:
+                self.backend.stop()
+            except Exception:
+                pass
+            self.last_error = ""
+            return {"ok": True, "reply": reply}
+        except Exception as error:
+            self.last_error = str(error)
+            try:
+                self.backend.stop()
+            except Exception:
+                pass
+            return {"ok": False, "error": str(error), "reply": reply}
+        finally:
+            self.busy = False
+
+    def play_motion_group(self, group_id: str) -> dict:
+        group = next((item for item in self.motion_groups if item["id"] == group_id), None)
+        if group is None:
+            raise ProgramError("动作库里没有这个动作组。")
+        return self._run_planned(
+            [{"kind": "arm", "frames": group["frames"], "name": group["name"]}],
+            f"回放动作组「{group['name']}」。",
+        )
+
+    def run_skill(self, workflow: list) -> dict:
+        try:
+            planned = expand_workflow(workflow, groups_by_id(self.motion_groups), self.catalog)
+        except SkillError as error:
+            raise ProgramError(str(error)) from error
+        return self._run_planned(planned, "正在按技能流程执行。触发器不会在真机上等待。")
+
+    def export_skill(self, payload: dict) -> bytes:
+        title = str(payload.get("title") or "").strip()
+        if not title:
+            raise ProgramError("先给技能起个名字。")
+        workflow = payload.get("workflow") or []
+        try:
+            import time as time_mod
+
+            pack_id = f"sp_{int(time_mod.time())}"
+            return build_skill_zip(
+                pack_id=pack_id,
+                title=title,
+                description=str(payload.get("description") or ""),
+                workflow=workflow,
+                groups=groups_by_id(self.motion_groups),
+                trigger=payload.get("trigger") if isinstance(payload.get("trigger"), dict) else None,
+            )
+        except (SkillError, MotionError) as error:
+            raise ProgramError(str(error)) from error
+
+    def run_python(self, source: str) -> dict:
+        try:
+            planned = compile_python(source, self.catalog)
+        except SkillError as error:
+            raise ProgramError(str(error)) from error
+        return self._run_planned(planned, "正在执行 Python 教学指令。")

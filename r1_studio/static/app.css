@@ -31,6 +31,10 @@ body {
 }
 .brand small { display: block; opacity: 0.8; font-size: 12px; }
 nav { display: flex; gap: 8px; flex: 1; flex-wrap: wrap; }
+textarea, select { font: inherit; }
+#python-source, #motion-frames, #skill-steps { width: 100%; }
+#python-source { border: 1px solid #ddd; border-radius: 8px; padding: 8px; }
+#motion-frames, #skill-steps { padding-left: 1.2rem; }
 nav button, .ghost, .danger, button {
   border: 0; border-radius: 999px; padding: 8px 14px; cursor: pointer; font-weight: 600;
 }

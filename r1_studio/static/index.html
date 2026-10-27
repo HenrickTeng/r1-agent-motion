@@ -23,6 +23,7 @@
       <button data-tab="agent">语音问答</button>
       <button data-tab="greet">近距迎宾</button>
       <button data-tab="imitate">动作模仿</button>
+      <button data-tab="skills">动作库与技能</button>
       <button data-tab="wrestle">扳手腕</button>
     </nav>
     <div class="safety">
@@ -151,12 +152,50 @@
       </section>
       <section id="panel-imitate" class="panel hidden">
         <h2>动作模仿（跟臂）</h2>
-        <p class="hint">人站在镜头前，机器人学着抬手臂。自拍约定：<strong>你的右手 → 机器人左臂</strong>。和单独跑 <code>python -m imitate --hardware</code> 同一套 Pose 跟臂。卡顿可以接受；切走会停掉跟臂后台。</p>
+        <p class="hint">人站在镜头前，机器人学着抬手臂。自拍约定：<strong>你的右手 → 机器人左臂</strong>。要记下这一姿势，保持本页开启，到「动作库与技能」里点「记录关键帧」。</p>
         <p>
           <button type="button" id="start-imitate">开始动作模仿</button>
           <button type="button" id="stop-imitate" class="ghost">结束动作模仿</button>
         </p>
         <p>当前：<strong id="imitate-label">动作模仿未开启</strong></p>
+      </section>
+      <section id="panel-skills" class="panel hidden">
+        <h2>动作库与技能</h2>
+        <p class="hint">和课程平台同一套数据：关键帧是 R1 双臂 10 个关节；导出 JSON 为 <code>r1-arm-imitate-mirror/v1</code>。技能包是 <code>eduplatform-skillpack/v3</code>，可以调用已保存的动作组。真机不执行坐下和蹲下。肘关节按平台模型角度保存，播放时再换成真机指令。</p>
+        <p>
+          <button type="button" id="start-skills">开始技能</button>
+          <button type="button" id="stop-skills" class="ghost">结束技能</button>
+        </p>
+        <h3>关键帧与动作组</h3>
+        <div class="toolbar">
+          <input id="motion-name" placeholder="动作组名称" maxlength="40" />
+          <button type="button" id="capture-frame">记录关键帧</button>
+          <button type="button" id="save-motion">保存动作组</button>
+          <button type="button" id="play-motion" class="ghost">回放</button>
+          <button type="button" id="download-motion" class="ghost">导出 JSON</button>
+          <label class="ghost file">导入 JSON<input id="upload-motion" type="file" accept=".json,application/json" /></label>
+        </div>
+        <p id="motion-status" class="hint">暂无关键帧。先开「动作模仿」，再回来记帧。</p>
+        <ol id="motion-frames"></ol>
+        <div class="toolbar">
+          <label>已保存<select id="motion-library"></select></label>
+          <button type="button" id="open-motion" class="ghost">打开</button>
+          <button type="button" id="delete-motion" class="ghost">删除</button>
+        </div>
+        <h3>技能流程</h3>
+        <div class="toolbar">
+          <input id="skill-title" placeholder="技能名称" value="迎宾" />
+          <select id="skill-action"></select>
+          <input id="skill-amount" type="number" min="1" value="1" />
+          <button type="button" id="skill-add">加入</button>
+          <button type="button" id="skill-wait" class="ghost">加等待</button>
+          <button type="button" id="skill-run">运行技能</button>
+          <button type="button" id="skill-export" class="ghost">导出技能包</button>
+        </div>
+        <ol id="skill-steps"></ol>
+        <h3>具身 Python</h3>
+        <textarea id="python-source" rows="8" spellcheck="false"></textarea>
+        <p><button type="button" id="python-run">运行 Python</button></p>
       </section>
       <section id="panel-wrestle" class="panel hidden">
         <h2>扳手腕（调试模式）</h2>

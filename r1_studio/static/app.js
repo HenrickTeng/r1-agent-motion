@@ -20,8 +20,33 @@ const FEATURE_NAMES = {
   agent: "语音问答",
   greet: "近距迎宾",
   imitate: "动作模仿",
+  skills: "动作库与技能",
   wrestle: "扳手腕",
 };
+
+const SKILL_BUILTINS = [
+  ["walk_forward", "前进", "步"],
+  ["walk_back", "后退", "步"],
+  ["turn_left", "左转", "度"],
+  ["turn_right", "右转", "度"],
+  ["stand", "站立", "秒"],
+  ["wave", "招手", "次"],
+  ["raise_hand", "举手", "次"],
+  ["salute", "抱拳", "次"],
+  ["nod", "点头", "次"],
+  ["shake_head", "摇头", "次"],
+  ["stretch", "伸懒腰", "次"],
+  ["toss", "抛手", "次"],
+];
+
+const motionDraft = { id: "", name: "", frames: [], lastCapture: 0 };
+const skillSteps = [];
+const PYTHON_SAMPLE = `# robot.stand()
+robot.wave(times=2)
+robot.move(vx=0.2, seconds=1)
+robot.turn(degrees=90)
+robot.nod(times=1)
+robot.stop()`;
 
 const WRESTLE_HINT =
   "扳手腕要进调试模式。调试结束后必须给 R1 关机再开机、确认走跑，再点「已重新开机」。网页不能替你开机。";
@@ -121,6 +146,7 @@ function paintState(data, light = false) {
   if (light) return;
   if (data.presets) renderPresets(data.presets);
   if (data.groups) renderGroups(data.groups);
+  if (data.motions) renderMotionLibrary(data.motions);
   if (data.vision && data.vision.items) {
     $("vision-items").innerHTML = data.vision.items
       .map((item) => `<li>${item.title}（${item.category}）${Math.round(item.score * 100)}%</li>`)
@@ -395,7 +421,7 @@ async function inspectBlocks(index) {
 function showTab(name) {
   state.tab = name;
   document.querySelectorAll("nav button").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
-  ["teleop", "gesture", "vision", "blocks", "agent", "greet", "imitate", "wrestle"].forEach((id) => {
+  ["teleop", "gesture", "vision", "blocks", "agent", "greet", "imitate", "skills", "wrestle"].forEach((id) => {
     $("panel-" + id).classList.toggle("hidden", id !== name);
   });
   if ($("recog")) $("recog").classList.toggle("hidden", name !== "gesture" && name !== "greet");
@@ -599,6 +625,188 @@ $("start-greet").onclick = () => startFeature("greet");
 $("stop-greet").onclick = () => stopFeature();
 $("start-imitate").onclick = () => startFeature("imitate");
 $("stop-imitate").onclick = () => stopFeature();
+
+function renderMotionLibrary(items) {
+  const box = $("motion-library");
+  if (!box) return;
+  const current = box.value;
+  box.innerHTML = (items || []).map((item) => `<option value="${item.id}">${item.name}（${item.frames} 帧）</option>`).join("");
+  if (current) box.value = current;
+  const action = $("skill-action");
+  if (!action || action.dataset.ready === "1" && action.dataset.motions === JSON.stringify(items)) return;
+  const selected = action.value;
+  const builtin = SKILL_BUILTINS.map(([id, label, unit]) => `<option value="builtin:${id}" data-unit="${unit}">${label}</option>`).join("");
+  const custom = (items || []).map((item) => `<option value="custom:${item.id}">我录的：${item.name}</option>`).join("");
+  action.innerHTML = builtin + custom;
+  action.dataset.ready = "1";
+  action.dataset.motions = JSON.stringify(items || []);
+  if (selected) action.value = selected;
+}
+
+function renderMotionDraft() {
+  const list = $("motion-frames");
+  if (!list) return;
+  list.innerHTML = motionDraft.frames.map((frame, index) => {
+    const gap = index ? `<input data-gap="${index}" type="number" min="0.05" max="3600" step="0.05" value="${frame.interval}" /> 秒` : "起始";
+    return `<li>#${index + 1} ${gap} <button type="button" data-drop-frame="${index}" class="ghost">删除</button></li>`;
+  }).join("");
+  $("motion-status").textContent = motionDraft.frames.length
+    ? `${motionDraft.frames.length} 帧${motionDraft.id ? " · 已关联保存的动作组" : " · 未保存"}`
+    : "暂无关键帧。先开「动作模仿」，再回来记帧。";
+}
+
+function renderSkillSteps() {
+  $("skill-steps").innerHTML = skillSteps.map((step, index) => {
+    const text = step.kind === "wait" ? `等待 ${step.seconds} 秒` : `${step.label} ${step.amount}${step.unit || ""}`;
+    return `<li>${text} <button type="button" data-drop-skill="${index}" class="ghost">删除</button></li>`;
+  }).join("");
+}
+
+$("start-skills").onclick = () => startFeature("skills");
+$("stop-skills").onclick = () => stopFeature();
+if ($("python-source") && !$("python-source").value) $("python-source").value = PYTHON_SAMPLE;
+
+$("capture-frame").onclick = async () => {
+  const data = await api("/api/motion/snapshot", {});
+  paintState(data);
+  if (!data.ok && data.error) return;
+  const frame = data.frame;
+  const now = Date.now();
+  frame.interval = motionDraft.frames.length
+    ? Math.min(3600, Math.max(0.05, Math.round((now - motionDraft.lastCapture) / 10) / 100))
+    : 0;
+  motionDraft.lastCapture = now;
+  motionDraft.frames.push(frame);
+  renderMotionDraft();
+};
+
+$("save-motion").onclick = async () => {
+  const data = await api("/api/motion/save", {
+    id: motionDraft.id,
+    name: $("motion-name").value,
+    frames: motionDraft.frames,
+  });
+  paintState(data);
+  if (data.ok) {
+    motionDraft.id = data.id;
+    renderMotionLibrary(data.motions);
+  }
+};
+
+$("play-motion").onclick = async () => {
+  const id = motionDraft.id || $("motion-library").value;
+  if (!id) return;
+  paintState(await api("/api/motion/play", { id }));
+};
+
+$("download-motion").onclick = async () => {
+  const id = motionDraft.id || $("motion-library").value;
+  if (!id) return;
+  const doc = await api("/api/motion/export", { id });
+  const blob = new Blob([JSON.stringify(doc, null, 2)], { type: "application/json" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `${doc.title || "motion"}.json`;
+  link.click();
+};
+
+$("upload-motion").onchange = async (event) => {
+  const file = event.target.files && event.target.files[0];
+  event.target.value = "";
+  if (!file) return;
+  const payload = JSON.parse(await file.text());
+  const data = await api("/api/motion/save", payload);
+  if (data.ok) renderMotionLibrary(data.motions);
+};
+
+$("open-motion").onclick = async () => {
+  const id = $("motion-library").value;
+  if (!id) return;
+  const group = await api("/api/motion/get", { id });
+  if (!group.ok) return;
+  motionDraft.id = group.id;
+  motionDraft.frames = group.frames;
+  $("motion-name").value = group.name;
+  renderMotionDraft();
+};
+
+$("delete-motion").onclick = async () => {
+  const id = $("motion-library").value;
+  if (!id) return;
+  const data = await api("/api/motion/delete", { id });
+  if (data.ok) renderMotionLibrary(data.motions);
+};
+
+$("motion-frames").onclick = (event) => {
+  const index = event.target && event.target.dataset && event.target.dataset.dropFrame;
+  if (index === undefined) return;
+  motionDraft.frames.splice(Number(index), 1);
+  if (motionDraft.frames[0]) motionDraft.frames[0].interval = 0;
+  renderMotionDraft();
+};
+$("motion-frames").onchange = (event) => {
+  const index = event.target && event.target.dataset && event.target.dataset.gap;
+  if (index === undefined) return;
+  motionDraft.frames[Number(index)].interval = Number(event.target.value);
+};
+
+function selectedSkill() {
+  const value = $("skill-action").value || "builtin:wave";
+  const [source, id] = value.split(":");
+  const option = $("skill-action").selectedOptions[0];
+  return {
+    kind: "action",
+    source,
+    id,
+    amount: (() => {
+      const unit = source === "custom" ? "次" : (option && option.dataset.unit) || "次";
+      const value = Number($("skill-amount").value || 1);
+      if (unit === "度" && value < 15) return 90;
+      if (unit === "秒" && value < 0.5) return 1;
+      return value;
+    })(),
+    unit: source === "custom" ? "次" : (option && option.dataset.unit) || "次",
+    label: option ? option.textContent : id,
+  };
+}
+
+$("skill-add").onclick = () => {
+  skillSteps.push(selectedSkill());
+  renderSkillSteps();
+};
+$("skill-wait").onclick = () => {
+  skillSteps.push({ kind: "wait", seconds: Number($("skill-amount").value || 1) });
+  renderSkillSteps();
+};
+$("skill-steps").onclick = (event) => {
+  const index = event.target && event.target.dataset && event.target.dataset.dropSkill;
+  if (index === undefined) return;
+  skillSteps.splice(Number(index), 1);
+  renderSkillSteps();
+};
+$("skill-run").onclick = async () => {
+  paintState(await api("/api/skill/run", { workflow: skillSteps }));
+};
+$("skill-export").onclick = async () => {
+  const res = await fetch("/api/skill/export", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title: $("skill-title").value, description: "", workflow: skillSteps }),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    paintState(data);
+    return;
+  }
+  const blob = await res.blob();
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `${$("skill-title").value || "skill"}.zip`;
+  link.click();
+};
+$("python-run").onclick = async () => {
+  paintState(await api("/api/python/run", { source: $("python-source").value }));
+};
 $("start-wrestle").onclick = () => startFeature("wrestle");
 $("clear-wrestle").onclick = async () => {
   const go = await confirmChoice({
