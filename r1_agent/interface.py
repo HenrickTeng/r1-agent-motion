@@ -12,7 +12,10 @@ def resolve_interface(name: str = "auto") -> str:
     found = _interface_on_robot_lan()
     if found:
         return found
-    return "en5" if platform.system() == "Darwin" else "enp7s0"
+    raise RuntimeError(
+        "没有网卡在 192.168.123.x（机器人网段）。走跑模式只需网线直连，不要进调试。"
+        "请接上 enp7s0 或把笔记本地址配成 192.168.123.99。"
+    )
 
 
 def _interface_on_robot_lan() -> str | None:

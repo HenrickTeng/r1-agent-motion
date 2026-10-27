@@ -51,6 +51,26 @@ def test_self_intro_and_salute():
     assert [action.name for action in actions] == ["self_intro", "salute_right"]
 
 
+def test_peace_cheer_alias():
+    _, actions = RulePlanner().plan("请比耶欢呼")
+    assert [action.name for action in actions] == ["cheer_both"]
+
+
+def test_extract_message_text_prefers_content_then_reasoning():
+    from r1_agent.planner import extract_message_text
+
+    assert extract_message_text({"content": " 连通 "}) == "连通"
+    assert extract_message_text({"content": "", "reasoning_content": "连通"}) == "连通"
+    assert extract_message_text({"content": [{"type": "text", "text": "连通"}]}) == "连通"
+
+
+def test_probe_llm_rejects_placeholder(monkeypatch):
+    from r1_studio.probe import probe_llm
+
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "公司给你的 key")
+    assert probe_llm() == 1
+
+
 def test_deepseek_key_file_used_when_env_missing(tmp_path, monkeypatch):
     monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
     path = tmp_path / "deepseek_key.txt"
